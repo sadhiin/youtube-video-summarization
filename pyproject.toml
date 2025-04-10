@@ -5,7 +5,9 @@ description = "Summarize and Chat with Youtube video"
 readme = "README.md"
 requires-python = ">=3.12.9"
 dependencies = [
+    "google-genai>=1.10.0",
     "groq>=0.22.0",
+    "langchain>=0.3.23",
     "python-dotenv>=1.1.0",
     "pytubefix>=8.12.3",
 ]
