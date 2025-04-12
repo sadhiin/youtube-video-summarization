@@ -158,7 +158,7 @@ async def chat_with_video(
     """Chat with a processed video using the transcript as context."""
     stored_summary = get_stored_summary(db, chat_request.video_id)
 
-    if not stored_summary or not stored_summary["transcript_path"]:
+    if not stored_summary or not stored_summary["transcript_path"] or not stored_summary.get("transcript_text"):
         raise HTTPException(
             status_code=404,
             detail="Video not found or transcript not available"

@@ -15,7 +15,7 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import EmbeddingsFilter
 
 from app.config import config
-from app.db.crud import add_chat_message, get_chat_history
+from app.db.crud import add_chat_message, get_chat_history, get_stored_summary
 from app.db.models import Video, Transcript
 from app.utils.vector_store import get_vector_store_for_video
 
@@ -90,12 +90,16 @@ def create_chat_chain(video_id: str, session: ChatSession):
         # Fallback approach: create vector store on the fly
         from app.db.database import get_db
         db = next(get_db())
-        video = db.query(Video).filter(Video.id == video_id).first()
-        if video and video.transcript:
+        stored_summary = get_stored_summary(db, video_id)
+
+        if stored_summary and "transcript_text" in stored_summary and stored_summary["transcript_text"]:
             # Create embeddings for transcript text
             from app.utils.vector_store import add_to_vector_db
-            add_to_vector_db(video_id, video.transcript.text)
+            print(f"Creating vector store for video {video_id}")
+            add_to_vector_db(video_id, stored_summary["transcript_text"])
             vector_store = get_vector_store_for_video(video_id)
+        else:
+            print(f"No transcript text found for video {video_id}")
 
     if not vector_store:
         raise ValueError(f"No vector store available for video {video_id}")
@@ -145,29 +149,41 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
     session = ChatSession(video_id, session_id)
     session.load_history_from_db(db)
 
-    # Create chain
-    chain = create_chat_chain(video_id, session)
+    try:
+        # Create chain
+        chain = create_chat_chain(video_id, session)
 
-    # Get response
-    response = chain.invoke({
-        "question": message,
-        "chat_history": session.memory.chat_memory.messages
-    })
+        # Get response
+        response = chain.invoke({
+            "question": message,
+            "chat_history": session.memory.chat_memory.messages
+        })
 
-    # Save interaction to database
-    session.save_interaction(db, message, response["answer"])
+        # Save interaction to database
+        session.save_interaction(db, message, response["answer"])
 
-    # Format sources
-    sources = []
-    if "source_documents" in response:
-        for doc in response["source_documents"]:
-            sources.append({
-                "content": doc.page_content,
-                "metadata": doc.metadata
-            })
+        # Format sources
+        sources = []
+        if "source_documents" in response:
+            for doc in response["source_documents"]:
+                sources.append({
+                    "content": doc.page_content,
+                    "metadata": doc.metadata
+                })
 
-    return {
-        "answer": response["answer"],
-        "sources": sources,
-        "session_id": session.session_id
-    }
+        return {
+            "answer": response["answer"],
+            "sources": sources,
+            "session_id": session.session_id
+        }
+    except ValueError as e:
+        # Handle the case where no vector store is available (no transcript)
+        error_msg = str(e)
+        if "No vector store available" in error_msg:
+            # Provide a more user-friendly response
+            return {
+                "answer": "I'm sorry, but the transcript for this video isn't available or couldn't be processed correctly. Please try summarizing the video again.",
+                "sources": [],
+                "session_id": session.session_id
+            }
+        raise

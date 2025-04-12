@@ -66,6 +66,10 @@ def add_to_vector_db(video_id: str, text: str):
         video_id: YouTube video ID
         text: Transcript text
     """
+    if not text or len(text.strip()) < 10:
+        print(f"Warning: Transcript for video {video_id} is too short or empty")
+        return None
+
     # Create the folder for this video's index
     video_dir = VECTOR_DIR / video_id
     os.makedirs(video_dir, exist_ok=True)
@@ -79,6 +83,8 @@ def add_to_vector_db(video_id: str, text: str):
 
     # Create documents with metadata
     chunks = text_splitter.split_text(text)
+    print(f"Split transcript into {len(chunks)} chunks for vector storage")
+
     documents = [
         Document(
             page_content=chunk,
@@ -94,18 +100,22 @@ def add_to_vector_db(video_id: str, text: str):
     # Initialize embeddings
     embeddings = get_embedding_model()
 
-    # Create vector store
-    vector_store = FAISS.from_documents(documents, embeddings)
+    try:
+        # Create vector store
+        vector_store = FAISS.from_documents(documents, embeddings)
 
-    # Save the vector store
-    index_path = video_dir / "index"
-    vector_store.save_local(str(index_path))
+        # Save the vector store
+        index_path = video_dir / "index"
+        vector_store.save_local(str(index_path))
 
-    # Add to global registry
-    _VIDEO_VECTOR_STORES[video_id] = vector_store
+        # Add to global registry
+        _VIDEO_VECTOR_STORES[video_id] = vector_store
 
-    print(f"Added {len(documents)} chunks to vector store for video {video_id}")
-    return vector_store
+        print(f"Successfully added {len(documents)} chunks to vector store for video {video_id}")
+        return vector_store
+    except Exception as e:
+        print(f"Error creating vector store for video {video_id}: {e}")
+        return None
 
 
 def search_similar_videos(query: str, limit: int = 5) -> List[str]:

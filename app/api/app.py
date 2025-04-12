@@ -40,6 +40,26 @@ async def startup_event():
     # Initialize vector store
     init_vector_store()
 
+    # Rebuild vector stores for videos with missing stores but available transcripts
+    try:
+        from app.db.database import get_db
+        from app.db.crud import get_stored_summary
+        from app.utils.vector_store import add_to_vector_db, get_vector_store_for_video
+
+        db_session = next(get_db())
+        from app.db.models import Video
+        videos = db_session.query(Video).all()
+
+        for video in videos:
+            if not get_vector_store_for_video(video.id):
+                print(f"Rebuilding vector store for video {video.id}")
+                # Get summary and check for transcript
+                summary = get_stored_summary(db_session, video.id)
+                if summary and summary.get("transcript_text"):
+                    add_to_vector_db(video.id, summary["transcript_text"])
+    except Exception as e:
+        print(f"Error rebuilding vector stores: {e}")
+
     # Set up Redis cache if configured
     if hasattr(config, "REDIS_URL") and config.REDIS_URL:
         setup_redis_cache(config.REDIS_URL)
