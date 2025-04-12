@@ -92,7 +92,7 @@ def add_to_vector_db(video_id: str, text: str):
     ]
 
     # Initialize embeddings
-    embeddings = init_embeddings()
+    embeddings = get_embedding_model()
 
     # Create vector store
     vector_store = FAISS.from_documents(documents, embeddings)
@@ -123,7 +123,7 @@ def search_similar_videos(query: str, limit: int = 5) -> List[str]:
         return []
 
     # Initialize embeddings
-    embeddings = init_embeddings()
+    embeddings = get_embedding_model()
 
     # Convert query to embedding
     query_embedding = embeddings.embed_query(query)

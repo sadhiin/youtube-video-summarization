@@ -73,13 +73,15 @@ def summarize_youtube_video(
     download_config = YouTubeDownloadConfig(
         url=url,
         media_type=MediaType.AUDIO,
-        output_directory=os.path.join(project_root, "data", "downloads")
+        output_directory=str(Path(project_root) / "data" / "downloads")
     )
+
 
     downloader = YouTubeDownloader(download_config)
     print(f"Downloading audio from: {url}")
     media = downloader.download()
-
+    print("Download complete.")
+    media_info = downloader.get_media_info()
     # 2. Transcribe audio
     transcription_config = TranscriptionConfig()
 

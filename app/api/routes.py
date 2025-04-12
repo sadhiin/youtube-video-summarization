@@ -84,6 +84,7 @@ async def summarize_video(
     # Check if video already exists and cached result can be used
     if not request.force_refresh and video_exists(db, video_id):
         stored_summary = get_stored_summary(db, video_id)
+        logging.debug(f"Stored summary: {stored_summary}")
         if stored_summary:
             return SummaryResponse(
                 video_id=video_id,
@@ -133,7 +134,8 @@ async def get_summary(
 ):
     """Get the summary for a processed video by ID."""
     stored_summary = get_stored_summary(db, video_id)
-
+    logging.debug(f"Stored summary: {stored_summary}")
+    
     if not stored_summary:
         raise HTTPException(status_code=404, detail="Video not found or not yet processed")
 
@@ -240,8 +242,6 @@ async def process_video_in_background(url: str, model: str, db: DBSession):
     from app.main import summarize_youtube_video
 
     try:
-        logging.info(f"Processing video in background: {url}")
-        logging.info(f"Using model: {model}")
         # Process the video
         summary = summarize_youtube_video(url=url, groq_model=model)
 

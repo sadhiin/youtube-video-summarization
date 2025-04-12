@@ -21,7 +21,7 @@ class YouTubeDownloadConfig(BaseModel):
     url: str
     media_type: MediaType = MediaType.AUDIO
     output_filename: Optional[str] = None
-    output_directory: str = os.path.join(config.BASE_DIR, "data/downloads")
+    output_directory: str = str(config.DOWNLOADS_DIR)
     save_file: bool = True
 
     @field_validator('url')

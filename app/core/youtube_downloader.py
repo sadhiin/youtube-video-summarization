@@ -55,26 +55,32 @@ class YouTubeDownloader:
             base_filename = f"{timestamp}_{safe_title[:50]}"
 
         # Ensure output directory exists
-        os.makedirs(self.config.output_directory, exist_ok=True)
+        output_dir = Path(self.config.output_directory)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        return os.path.join(self.config.output_directory, f"{base_filename}.{extension}")
+        # Use pathlib for reliable path joining
+        return os.path.join(output_dir, f"{base_filename}.{extension}")
 
     def download_video(self) -> str:
-        """
-        Download video and return the file path.
-
-        Returns:
-            Path to downloaded video file or empty string if not saved
-        """
         try:
             video_stream = self.yt.streams.get_highest_resolution()
-            output_path = self._get_filename("mp4")
-
+            full_output_path = self._get_filename("mp4")
+            
+            # Split path into directory and filename components
+            output_dir = os.path.dirname(full_output_path)
+            filename = os.path.basename(full_output_path)
+            
             logging.info(f"Downloading video: {self.yt.title}")
             if self.config.save_file:
-                video_stream.download(filename=output_path)
-                logging.info(f"Video saved to: {output_path}")
-                return output_path
+                video_stream.download(output_path=output_dir, filename=filename)
+                
+                # Verify file exists
+                if not os.path.exists(full_output_path):
+                    logging.error(f"File not found at expected path: {full_output_path}")
+                else:
+                    logging.info(f"Video saved to: {full_output_path}")
+                
+                return full_output_path
             else:
                 logging.info("Video processed in memory (not saved)")
                 return ""
@@ -83,22 +89,31 @@ class YouTubeDownloader:
             logging.error(f"Error downloading video: {str(e)}")
             raise
 
-    def download_audio(self) -> str:
-        """
-        Download audio and return the file path.
 
-        Returns:
-            Path to downloaded audio file or empty string if not saved
-        """
+    def download_audio(self) -> str:
         try:
             audio_stream = self.yt.streams.filter(only_audio=True).order_by('abr').last()
-            output_path = self._get_filename("mp3")
-            logging.debug(f"Output path:{output_path}")
+            full_output_path = self._get_filename("mp3")
+            
+            # Split path into directory and filename components
+            output_dir = os.path.dirname(full_output_path)
+            filename = os.path.basename(full_output_path)
+            
+            logging.debug(f"Output directory: {output_dir}")
+            logging.debug(f"Filename: {filename}")
             logging.info(f"Downloading audio: {self.yt.title}")
+            
             if self.config.save_file:
-                audio_stream.download(filename=output_path)
-                logging.info(f"Audio saved to: {output_path}")
-                return output_path
+                # Correctly specify output_path and filename separately
+                audio_stream.download(output_path=output_dir, filename=filename)
+                
+                # Verify file exists after download
+                if not os.path.exists(full_output_path):
+                    logging.error(f"File not found at expected path: {full_output_path}")
+                else:
+                    logging.info(f"Audio saved to: {full_output_path}")
+                
+                return full_output_path
             else:
                 logging.info("Audio processed in memory (not saved)")
                 return ""
@@ -121,5 +136,7 @@ class YouTubeDownloader:
 
         if self.config.media_type in [MediaType.AUDIO, MediaType.BOTH]:
             media_info.audio_path = self.download_audio()
-
+        print("**********Meida info**********")
+        print(media_info)
+        logging.info(f"Media info: {media_info}")
         return media_info
