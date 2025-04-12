@@ -88,7 +88,7 @@ def summarize_youtube_video(
     summary_config = SummaryConfig(
         model=groq_model,
         temperature=0.0,
-        max_tokens=1000
+        max_tokens=1024,
     )
 
     summarizer = TranscriptSummarizer()

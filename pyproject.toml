@@ -25,4 +25,5 @@ dependencies = [
     "streamlit>=1.44.1",
     "fastapi[all]>=0.115.12",
     "uvicorn>=0.34.0",
+    "redis>=5.2.1",
 ]

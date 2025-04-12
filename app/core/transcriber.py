@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from groq import Groq
 
 from app.models.schemas import YouTubeMedia, TranscriptionConfig
-
+# from app.utils.logger import logging
 
 class AudioTranscriber:
     """Class to handle audio transcription operations."""
@@ -53,6 +53,7 @@ class AudioTranscriber:
         transcript_path = transcript_dir / f"{audio_file_path.stem}.json"
 
         # Perform transcription
+        # logging.info(f"Transcribing audio file: {media.audio_path}")
         print(f"Transcribing audio file: {media.audio_path}")
 
         with open(media.audio_path, "rb") as audio_file:
@@ -61,8 +62,8 @@ class AudioTranscriber:
                 model=config.model,
                 prompt=config.prompt,
                 response_format=config.response_format,
-                timestamp_granularities=config.timestamp_granularities,
-                language=config.language,
+                # timestamp_granularities=config.timestamp_granularities,
+                # language=config.language,
                 temperature=config.temperature
             )
 
