@@ -35,9 +35,13 @@ def main():
 
     env["API_URL"] = api_url
 
+    # Add the project root to PYTHONPATH to fix import issues
+    env["PYTHONPATH"] = str(app_dir) + os.pathsep + env.get("PYTHONPATH", "")
+
     # Print startup info
     print(f"Starting YouTube Video Summarizer Streamlit app on port {args.port}")
     print(f"API server is expected to be running at: {api_url}")
+    print(f"Added {app_dir} to PYTHONPATH for imports")
 
     # Construct the command to run Streamlit
     cmd = [

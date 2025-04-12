@@ -10,7 +10,8 @@ from typing import Dict, Any, Optional
 from groq import Groq
 
 from app.models.schemas import YouTubeMedia, TranscriptionConfig
-
+from app.utils.logger import logging
+from app.config import config
 
 class AudioTranscriber:
     """Class to handle audio transcription operations."""
@@ -28,7 +29,7 @@ class AudioTranscriber:
 
         self.client = Groq(api_key=self.api_key)
 
-    def transcribe(self, media: YouTubeMedia, config: TranscriptionConfig) -> YouTubeMedia:
+    def transcribe(self, media: YouTubeMedia, transcribe_config: TranscriptionConfig) -> YouTubeMedia:
         """
         Transcribe the audio from a YouTubeMedia object.
 
@@ -42,44 +43,44 @@ class AudioTranscriber:
         if not media.audio_path:
             raise ValueError("Audio path not found in media object")
 
-        if not os.path.exists(media.audio_path):
+        if not os.path.exists(media.audio_path) or \
+              not os.path.isfile(media.audio_path):
             raise FileNotFoundError(f"Audio file not found at {media.audio_path}")
 
         # Define transcript path
         audio_file_path = Path(media.audio_path)
-        transcript_dir = Path("data/transcripts")
+        # transcript_dir = Path(os.path.join(config.BASE_DIR, "data", "transcripts"))
+        transcript_dir = Path(os.path.join(config.BASE_DIR, "data", "transcripts"))
         transcript_dir.mkdir(parents=True, exist_ok=True)
 
         transcript_path = transcript_dir / f"{audio_file_path.stem}.json"
 
         # Perform transcription
-        print(f"Transcribing audio file: {media.audio_path}")
+        logging.info(f"Transcribing audio file: {media.audio_path}")
 
         with open(media.audio_path, "rb") as audio_file:
             transcription = self.client.audio.transcriptions.create(
                 file=(audio_file_path.name, audio_file.read()),
-                model=config.model,
-                prompt=config.prompt,
-                response_format=config.response_format,
-                timestamp_granularities=config.timestamp_granularities,
-                language=config.language,
-                temperature=config.temperature
+                model=transcribe_config.model,
+                prompt=transcribe_config.prompt,
+                response_format=transcribe_config.response_format,
+                # timestamp_granularities=config.timestamp_granularities,
+                # language=config.language,
+                temperature=transcribe_config.temperature
             )
 
         # Save the transcription to a JSON file
-        print(f"Saving transcription to: {transcript_path}")
+        logging.info(f"Saving transcription to: {transcript_path}")
 
         with open(transcript_path, "w", encoding="utf-8") as f:
             if hasattr(transcription, "model_dump_json"):
-                # For Pydantic models
-                f.write(transcription.model_dump_json(indent=2))
+                f.write(transcription.model_dump_json(indent=4))
             else:
-                # For normal dictionaries or objects
                 json.dump(transcription, f, indent=2, default=str)
 
         # Update the media object
         media.transcript_path = str(transcript_path)
-        print("Transcription complete.")
+        logging.info("Transcription complete.")
 
         return media
 

@@ -29,7 +29,7 @@ def header():
 def sidebar():
     """Display the sidebar with app information and options."""
     with st.sidebar:
-        st.image("https://raw.githubusercontent.com/streamlit/streamlit/master/examples/data/logo.png", width=100)
+        st.image("https://user-images.githubusercontent.com/47686437/168548113-b3cd4206-3281-445b-b7c6-bc0a3251293d.png", width=100)
         st.title("YouTube Summarizer")
 
         st.markdown("## About")
@@ -48,32 +48,52 @@ def sidebar():
             st.session_state.api_url = api_url
 
         st.divider()
-        st.markdown("### Made with ❤️ using LLM Technology")
+        st.markdown("### Made By [@sadhiin](https://github.com/sadhiin) with ❤️ ")
 
 
 def youtube_input():
     """
-    Display a YouTube URL input field.
+    Display a YouTube URL input field with summary configuration options.
 
     Returns:
-        The entered YouTube URL or None
+        Tuple containing:
+        - The entered YouTube URL or None
+        - Whether to force refresh
+        - Number of lines for summary
+        - Optional selective keywords
     """
     with st.form(key="youtube_form"):
         url = st.text_input(
-            "Enter YouTube URL",
+            "YouTube Video URL",
             placeholder="https://www.youtube.com/watch?v=VIDEO_ID",
         )
 
+        # Add summary configuration options
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Number of lines for summary
+            st.subheader("Desired number of lines for summary")
+            num_lines = st.number_input("", min_value=1, max_value=20, value=5, step=1)
+
+        with col2:
+            # Selective keywords
+            st.subheader("Selective words (optional, comma-separated)")
+            selective_keywords = st.text_input(
+                "",
+                placeholder="e.g., technology, AI, innovation"
+            )
+
         col1, col2 = st.columns([1, 5])
         with col1:
-            submit = st.form_submit_button("Summarize")
+            submit = st.form_submit_button("Generate Summary")
         with col2:
             force_refresh = st.checkbox("Force refresh (ignore cache)", value=False)
 
     if submit and url:
-        return url, force_refresh
+        return url, force_refresh, num_lines, selective_keywords
 
-    return None, False
+    return None, False, 5, None
 
 
 def display_summary(summary: Dict[str, Any]):

@@ -1,10 +1,12 @@
 """
 Data models for the YouTube summarizer application.
 """
-
+import time
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, field_validator
+from app.config import config
+import os
 
 
 class MediaType(str, Enum):
@@ -19,7 +21,7 @@ class YouTubeDownloadConfig(BaseModel):
     url: str
     media_type: MediaType = MediaType.AUDIO
     output_filename: Optional[str] = None
-    output_directory: str = "data/downloads"
+    output_directory: str = str(config.DOWNLOADS_DIR)
     save_file: bool = True
 
     @field_validator('url')
@@ -48,16 +50,18 @@ class TranscriptionConfig(BaseModel):
     prompt: Optional[str] = None
     response_format: str = "verbose_json"
     temperature: float = 0.0
-    timestamp_granularities: List[str] = ["segment"]
+    # timestamp_granularities: List[str] = ["segment"]
 
 
 class SummaryConfig(BaseModel):
     """Configuration for summarization operations."""
     model: str
     temperature: float = 0.0
-    max_tokens: int = 1000
+    max_tokens: int = 1024
     chunk_size: int = 4000
     chunk_overlap: int = 400
+    num_lines: Optional[int] = 5
+    selective_keywords: Optional[str] = None
 
 
 class VideoSummary(BaseModel):
@@ -66,4 +70,4 @@ class VideoSummary(BaseModel):
     summary: str
     transcript_text: Optional[str] = None
     transcript_segments: Optional[List[Dict[str, Any]]] = None
-    created_at: str = Field(default_factory=lambda: import time; return time.strftime("%Y-%m-%d %H:%M:%S"))
+    created_at: str = Field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))

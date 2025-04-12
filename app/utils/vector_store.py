@@ -7,8 +7,10 @@ import json
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
-from langchain.embeddings import init_embeddings
-from langchain.vectorstores.faiss import FAISS
+# from langchain.embeddings import init_embeddings
+from app.embeddings.get_embedding_model import get_embedding_model
+# from langchain.vectorstores.faiss import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -35,7 +37,7 @@ def _load_existing_indices():
         return
 
     # Get embeddings
-    embeddings = init_embeddings()
+    embeddings = get_embedding_model()
 
     # Load each index
     for video_dir in indices_dir.iterdir():
@@ -44,7 +46,7 @@ def _load_existing_indices():
             index_path = video_dir / "index"
             if index_path.exists():
                 try:
-                    vector_store = FAISS.load_local(str(index_path), embeddings)
+                    vector_store = FAISS.load_local(str(index_path), embeddings, allow_dangerous_deserialization=True)
                     _VIDEO_VECTOR_STORES[video_id] = vector_store
                     print(f"Loaded vector index for video {video_id}")
                 except Exception as e:
@@ -59,52 +61,88 @@ def get_vector_store_for_video(video_id: str) -> Optional[FAISS]:
 def add_to_vector_db(video_id: str, text: str):
     """
     Add a transcript to the vector database.
-
-    Args:
-        video_id: YouTube video ID
-        text: Transcript text
     """
+    if not text:
+        print(f"Error: Transcript for video {video_id} is empty")
+        return None
+
+    # Strip and check the text length
+    cleaned_text = text.strip()
+    if len(cleaned_text) < 10:
+        print(f"Error: Transcript for video {video_id} is too short ({len(cleaned_text)} chars)")
+        return None
+
     # Create the folder for this video's index
     video_dir = VECTOR_DIR / video_id
     os.makedirs(video_dir, exist_ok=True)
 
-    # Split text into chunks
+    # Split text into chunks - INCREASED CHUNK SIZE FOR BETTER CONTEXT
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50,
+        chunk_size=1000,  # Increased from 500
+        chunk_overlap=200,  # Increased from 50
         separators=["\n\n", "\n", ". ", " ", ""]
     )
 
     # Create documents with metadata
-    chunks = text_splitter.split_text(text)
+    chunks = text_splitter.split_text(cleaned_text)
+    print(f"Split transcript into {len(chunks)} chunks for vector storage")
+
+    # Ensure we have chunks to work with
+    if not chunks:
+        print(f"Error: No chunks were created from transcript for video {video_id}")
+        return None
+
+    # Store original text in metadata for debugging
     documents = [
         Document(
             page_content=chunk,
             metadata={
                 "video_id": video_id,
                 "chunk_id": i,
-                "source": "transcript"
+                "source": "transcript",
+                "chunk_length": len(chunk)  # Add length metadata for debugging
             }
         )
         for i, chunk in enumerate(chunks)
     ]
 
+    # Save metadata about the chunks for debugging
+    try:
+        with open(video_dir / "chunks_metadata.json", "w") as f:
+            json.dump({
+                "num_chunks": len(chunks),
+                "avg_chunk_length": sum(len(c) for c in chunks) / len(chunks),
+                "total_length": len(cleaned_text)
+            }, f)
+    except Exception as e:
+        print(f"Warning: Could not save chunks metadata: {e}")
+
     # Initialize embeddings
-    embeddings = init_embeddings()
+    embeddings = get_embedding_model()
 
-    # Create vector store
-    vector_store = FAISS.from_documents(documents, embeddings)
+    try:
+        # Create vector store
+        vector_store = FAISS.from_documents(documents, embeddings)
 
-    # Save the vector store
-    index_path = video_dir / "index"
-    vector_store.save_local(str(index_path))
+        # Test the vector store with a simple query to ensure it works
+        test_results = vector_store.similarity_search("test query", k=1)
+        if not test_results:
+            print("Warning: Vector store created but test query returned no results")
 
-    # Add to global registry
-    _VIDEO_VECTOR_STORES[video_id] = vector_store
+        # Save the vector store
+        index_path = video_dir / "index"
+        vector_store.save_local(str(index_path))
 
-    print(f"Added {len(documents)} chunks to vector store for video {video_id}")
-    return vector_store
+        # Add to global registry
+        _VIDEO_VECTOR_STORES[video_id] = vector_store
 
+        print(f"Successfully added {len(documents)} chunks to vector store for video {video_id}")
+        return vector_store
+    except Exception as e:
+        print(f"Error creating vector store for video {video_id}: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return None
 
 def search_similar_videos(query: str, limit: int = 5) -> List[str]:
     """
@@ -121,7 +159,7 @@ def search_similar_videos(query: str, limit: int = 5) -> List[str]:
         return []
 
     # Initialize embeddings
-    embeddings = init_embeddings()
+    embeddings = get_embedding_model()
 
     # Convert query to embedding
     query_embedding = embeddings.embed_query(query)

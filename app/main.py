@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 from dotenv import load_dotenv
+from typing import Optional
 
 from app.models.schemas import (
     MediaType,
@@ -18,19 +19,22 @@ from app.models.schemas import (
 from app.core.youtube_downloader import YouTubeDownloader
 from app.core.transcriber import AudioTranscriber
 from app.core.summarizer import TranscriptSummarizer
+from app.config import config
 
 
 def init_directories():
     """Create necessary directories for storing data."""
-    os.makedirs("data/downloads", exist_ok=True)
-    os.makedirs("data/transcripts", exist_ok=True)
-    os.makedirs("data/summaries", exist_ok=True)
+    # Use absolute paths from the project root
+    os.makedirs(os.path.join(config.BASE_DIR, "data", "downloads"), exist_ok=True)
+    os.makedirs(os.path.join(config.BASE_DIR, "data", "transcripts"), exist_ok=True)
+    os.makedirs(os.path.join(config.BASE_DIR, "data", "summaries"), exist_ok=True)
 
 
 def save_summary(summary: VideoSummary, output_file: str = None):
     """Save the summary to a JSON file."""
     if output_file is None:
-        output_dir = Path("data/summaries")
+        output_dir = Path(os.path.join(config.BASE_DIR, "data", "summaries"))
+        output_dir.mkdir(parents=True, exist_ok=True)
         video_id = summary.media_info.video_id or "unknown"
         output_file = output_dir / f"{video_id}_summary.json"
     else:
@@ -49,7 +53,9 @@ def save_summary(summary: VideoSummary, output_file: str = None):
 
 def summarize_youtube_video(
     url: str,
-    groq_model: str = "deepseek-r1-distill-qwen-32b",
+    groq_model: str = config.DEFAULT_SUMMARY_MODEL,
+    num_lines: int = 5,
+    selective_keywords: Optional[str] = None,
     output_file: str = None
 ) -> VideoSummary:
     """
@@ -58,22 +64,29 @@ def summarize_youtube_video(
     Args:
         url: YouTube video URL
         groq_model: Groq language model to use for summarization
+        num_lines: The desired number of lines for the summary
+        selective_keywords: Optional comma-separated keywords to focus on in the summary
         output_file: Optional file path to save the summary
 
     Returns:
         VideoSummary object
     """
+    # Get the project root directory path from config
+    project_root = config.BASE_DIR
+
     # 1. Download YouTube audio
     download_config = YouTubeDownloadConfig(
         url=url,
         media_type=MediaType.AUDIO,
-        output_directory="data/downloads"
+        output_directory=str(Path(project_root) / "data" / "downloads")
     )
+
 
     downloader = YouTubeDownloader(download_config)
     print(f"Downloading audio from: {url}")
     media = downloader.download()
-
+    print("Download complete.")
+    media_info = downloader.get_media_info()
     # 2. Transcribe audio
     transcription_config = TranscriptionConfig()
 
@@ -88,7 +101,9 @@ def summarize_youtube_video(
     summary_config = SummaryConfig(
         model=groq_model,
         temperature=0.0,
-        max_tokens=1000
+        max_tokens=1024,
+        num_lines=num_lines,
+        selective_keywords=selective_keywords
     )
 
     summarizer = TranscriptSummarizer()
@@ -108,7 +123,7 @@ def main():
     """Main function to run the application from command line."""
     parser = argparse.ArgumentParser(description="YouTube Video Summarizer")
     parser.add_argument("url", help="YouTube video URL")
-    parser.add_argument("--model", default="deepseek-r1-distill-qwen-32b",
+    parser.add_argument("--model", default="llama-3.3-70b-versatile",
                         help="Groq language model for summarization")
     parser.add_argument("--output", help="Output file path for the summary")
 
