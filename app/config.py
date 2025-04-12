@@ -31,7 +31,7 @@ class Config:
 
     # Default models
     DEFAULT_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
-    DEFAULT_SUMMARY_MODEL = "deepseek-r1-distill-qwen-32b"
+    DEFAULT_SUMMARY_MODEL = "llama-3.3-70b-versatile"
     VECTOR_EMBEDDING_MODEL = os.getenv("VECTOR_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     os.environ["NVIDIA_API_KEY"] = os.getenv("NVIDIA_API_KEY")
 

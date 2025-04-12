@@ -115,7 +115,7 @@ summary = summarize_youtube_video("https://www.youtube.com/watch?v=VIDEO_ID")
 # Custom options
 summary = summarize_youtube_video(
     url="https://www.youtube.com/watch?v=VIDEO_ID",
-    groq_model="deepseek-r1-distill-qwen-32b",
+    groq_model="llama-3.3-70b-versatile",
     output_file="path/to/output.json"
 )
 

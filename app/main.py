@@ -116,7 +116,7 @@ def main():
     """Main function to run the application from command line."""
     parser = argparse.ArgumentParser(description="YouTube Video Summarizer")
     parser.add_argument("url", help="YouTube video URL")
-    parser.add_argument("--model", default="deepseek-r1-distill-qwen-32b",
+    parser.add_argument("--model", default="llama-3.3-70b-versatile",
                         help="Groq language model for summarization")
     parser.add_argument("--output", help="Output file path for the summary")
 
