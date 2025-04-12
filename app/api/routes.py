@@ -135,17 +135,17 @@ async def get_summary(
     """Get the summary for a processed video by ID."""
     stored_summary = get_stored_summary(db, video_id)
     logging.debug(f"Stored summary: {stored_summary}")
-    
+
     if not stored_summary:
         raise HTTPException(status_code=404, detail="Video not found or not yet processed")
 
     return SummaryResponse(
         video_id=video_id,
-        title=stored_summary.title,
-        author=stored_summary.author,
-        summary=stored_summary.summary,
-        audio_available=bool(stored_summary.audio_path),
-        transcript_available=bool(stored_summary.transcript_path),
+        title=stored_summary["title"],
+        author=stored_summary["author"],
+        summary=stored_summary["summary"] if "summary" in stored_summary else "Processing in background. Please check back shortly.",
+        audio_available=bool(stored_summary["audio_path"]),
+        transcript_available=bool(stored_summary["transcript_path"]),
         cached=True
     )
 
@@ -158,7 +158,7 @@ async def chat_with_video(
     """Chat with a processed video using the transcript as context."""
     stored_summary = get_stored_summary(db, chat_request.video_id)
 
-    if not stored_summary or not stored_summary.transcript_path:
+    if not stored_summary or not stored_summary["transcript_path"]:
         raise HTTPException(
             status_code=404,
             detail="Video not found or transcript not available"
@@ -201,11 +201,11 @@ async def search_videos(
                 results.append(
                     SummaryResponse(
                         video_id=video_id,
-                        title=stored_summary.title,
-                        author=stored_summary.author,
-                        summary=stored_summary.summary,
-                        audio_available=bool(stored_summary.audio_path),
-                        transcript_available=bool(stored_summary.transcript_path),
+                        title=stored_summary["title"],
+                        author=stored_summary["author"],
+                        summary=stored_summary["summary"] if "summary" in stored_summary else "Summary not available",
+                        audio_available=bool(stored_summary["audio_path"]),
+                        transcript_available=bool(stored_summary["transcript_path"]),
                         cached=True
                     )
                 )

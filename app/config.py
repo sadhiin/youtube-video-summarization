@@ -82,7 +82,9 @@ class ProductionConfig(Config):
 def get_config():
     """Get the appropriate configuration based on environment."""
     env = os.getenv("ENVIRONMENT", "development").lower()
-
+    os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY", "your_langsmith_api_key")
+    os.environ["LANGSMITH_TRACING"] = os.getenv("LANGSMITH_TRACING", "true")
+    os.environ["LANGSMITH_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "YouTube Summarizer Project")
     if env == "production":
         return ProductionConfig
     else:

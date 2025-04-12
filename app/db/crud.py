@@ -9,7 +9,7 @@ import json
 
 from app.db.models import Video, Transcript, Summary, ChatHistory
 from app.models.schemas import YouTubeMedia, VideoSummary
-
+from app.utils.logger import logging
 
 def video_exists(db: Session, video_id: str) -> bool:
     """Check if a video exists in the database."""
@@ -99,6 +99,7 @@ def get_stored_summary(db: Session, video_id: str) -> Optional[Dict[str, Any]]:
     """
     video = get_video(db, video_id)
     if not video:
+        logging.error(f"Video with ID {video_id} not found in the database.")
         return None
 
     result = {

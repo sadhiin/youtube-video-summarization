@@ -52,7 +52,7 @@ def save_summary(summary: VideoSummary, output_file: str = None):
 
 def summarize_youtube_video(
     url: str,
-    groq_model: str = "deepseek-r1-distill-qwen-32b",
+    groq_model: str = config.DEFAULT_SUMMARY_MODEL,
     output_file: str = None
 ) -> VideoSummary:
     """

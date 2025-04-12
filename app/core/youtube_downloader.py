@@ -65,21 +65,21 @@ class YouTubeDownloader:
         try:
             video_stream = self.yt.streams.get_highest_resolution()
             full_output_path = self._get_filename("mp4")
-            
+
             # Split path into directory and filename components
             output_dir = os.path.dirname(full_output_path)
             filename = os.path.basename(full_output_path)
-            
+
             logging.info(f"Downloading video: {self.yt.title}")
             if self.config.save_file:
                 video_stream.download(output_path=output_dir, filename=filename)
-                
+
                 # Verify file exists
                 if not os.path.exists(full_output_path):
                     logging.error(f"File not found at expected path: {full_output_path}")
                 else:
                     logging.info(f"Video saved to: {full_output_path}")
-                
+
                 return full_output_path
             else:
                 logging.info("Video processed in memory (not saved)")
@@ -94,25 +94,25 @@ class YouTubeDownloader:
         try:
             audio_stream = self.yt.streams.filter(only_audio=True).order_by('abr').last()
             full_output_path = self._get_filename("mp3")
-            
+
             # Split path into directory and filename components
             output_dir = os.path.dirname(full_output_path)
             filename = os.path.basename(full_output_path)
-            
+
             logging.debug(f"Output directory: {output_dir}")
             logging.debug(f"Filename: {filename}")
             logging.info(f"Downloading audio: {self.yt.title}")
-            
+
             if self.config.save_file:
                 # Correctly specify output_path and filename separately
                 audio_stream.download(output_path=output_dir, filename=filename)
-                
+
                 # Verify file exists after download
                 if not os.path.exists(full_output_path):
                     logging.error(f"File not found at expected path: {full_output_path}")
                 else:
                     logging.info(f"Audio saved to: {full_output_path}")
-                
+
                 return full_output_path
             else:
                 logging.info("Audio processed in memory (not saved)")
@@ -136,7 +136,5 @@ class YouTubeDownloader:
 
         if self.config.media_type in [MediaType.AUDIO, MediaType.BOTH]:
             media_info.audio_path = self.download_audio()
-        print("**********Meida info**********")
-        print(media_info)
-        logging.info(f"Media info: {media_info}")
+
         return media_info

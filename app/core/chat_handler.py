@@ -11,8 +11,8 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chat_models import init_chat_model
-from langchain.embeddings import init_embeddings
-from langchain.vectorstores import init_vector_store
+# from langchain.embeddings import init_embeddings
+# from langchain.vectorstores import init_vector_store
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import EmbeddingsFilter
 
@@ -21,6 +21,7 @@ from app.db.crud import add_chat_message, get_chat_history
 from app.db.models import Video, Transcript
 from app.utils.vector_store import get_vector_store_for_video
 
+from app.embeddings.get_embedding_model import get_embedding_model
 
 # Chat system prompt
 CHAT_SYSTEM_PROMPT = """
@@ -105,7 +106,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
     base_retriever = vector_store.as_retriever(search_kwargs={"k": 5})
 
     # Initialize embeddings for filtering
-    embeddings = init_embeddings()
+    embeddings = get_embedding_model()
     embeddings_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.7)
     retriever = ContextualCompressionRetriever(
         base_compressor=embeddings_filter,
@@ -143,7 +144,6 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
     Returns:
         Dictionary with answer and sources
     """
-    # Create or load session
     session = ChatSession(video_id, session_id)
     session.load_history_from_db(db)
 
@@ -151,7 +151,10 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
     chain = create_chat_chain(video_id, session)
 
     # Get response
-    response = chain({"question": message})
+    response = chain.invoke({
+        "question": message,
+        "chat_history": session.memory.chat_memory.messages
+    })
 
     # Save interaction to database
     session.save_interaction(db, message, response["answer"])

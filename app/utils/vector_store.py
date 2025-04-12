@@ -46,7 +46,7 @@ def _load_existing_indices():
             index_path = video_dir / "index"
             if index_path.exists():
                 try:
-                    vector_store = FAISS.load_local(str(index_path), embeddings)
+                    vector_store = FAISS.load_local(str(index_path), embeddings, allow_dangerous_deserialization=True)
                     _VIDEO_VECTOR_STORES[video_id] = vector_store
                     print(f"Loaded vector index for video {video_id}")
                 except Exception as e:
