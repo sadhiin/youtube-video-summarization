@@ -7,12 +7,12 @@ import requests
 import time
 from typing import Dict, List, Any, Optional
 from urllib.parse import urljoin
-
+from app.config import config
 
 class ApiClient:
     """Client for interacting with the YouTube Video Summarizer API."""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = config.PUBLIC_URL):
         """
         Initialize the API client.
 

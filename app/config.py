@@ -32,7 +32,13 @@ class Config:
     # Default models
     DEFAULT_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
     DEFAULT_SUMMARY_MODEL = "deepseek-r1-distill-qwen-32b"
+    VECTOR_EMBEDDING_MODEL = os.getenv("VECTOR_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    os.environ["NVIDIA_API_KEY"] = os.getenv("NVIDIA_API_KEY")
 
+    # os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
+    # os.environ["LANGSMITH_TRACING"] = os.getenv("LANGSMITH_TRACING", "true")
+    # os.environ["LANGSMITH_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "YouTube Summarizer Project")
+    PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000")
     # Create data directories if they don't exist
     @classmethod
     def initialize(cls):

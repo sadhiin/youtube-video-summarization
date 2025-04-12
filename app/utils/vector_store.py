@@ -7,8 +7,10 @@ import json
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
-from langchain.embeddings import init_embeddings
-from langchain.vectorstores.faiss import FAISS
+# from langchain.embeddings import init_embeddings
+from app.embeddings.get_embedding_model import get_embedding_model
+# from langchain.vectorstores.faiss import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -35,7 +37,7 @@ def _load_existing_indices():
         return
 
     # Get embeddings
-    embeddings = init_embeddings()
+    embeddings = get_embedding_model()
 
     # Load each index
     for video_dir in indices_dir.iterdir():

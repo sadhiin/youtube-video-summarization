@@ -26,4 +26,5 @@ dependencies = [
     "fastapi[all]>=0.115.12",
     "uvicorn>=0.34.0",
     "redis>=5.2.1",
+    "langchain-nvidia-ai-endpoints>=0.3.9",
 ]

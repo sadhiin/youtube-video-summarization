@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from groq import Groq
 
 from app.models.schemas import YouTubeMedia, TranscriptionConfig
-# from app.utils.logger import logging
+from app.utils.logger import logging
 
 class AudioTranscriber:
     """Class to handle audio transcription operations."""
@@ -54,7 +54,7 @@ class AudioTranscriber:
 
         # Perform transcription
         # logging.info(f"Transcribing audio file: {media.audio_path}")
-        print(f"Transcribing audio file: {media.audio_path}")
+        logging.info(f"Transcribing audio file: {media.audio_path}")
 
         with open(media.audio_path, "rb") as audio_file:
             transcription = self.client.audio.transcriptions.create(
@@ -68,7 +68,7 @@ class AudioTranscriber:
             )
 
         # Save the transcription to a JSON file
-        print(f"Saving transcription to: {transcript_path}")
+        logging.info(f"Saving transcription to: {transcript_path}")
 
         with open(transcript_path, "w", encoding="utf-8") as f:
             if hasattr(transcription, "model_dump_json"):
@@ -80,7 +80,7 @@ class AudioTranscriber:
 
         # Update the media object
         media.transcript_path = str(transcript_path)
-        print("Transcription complete.")
+        logging.info("Transcription complete.")
 
         return media
 

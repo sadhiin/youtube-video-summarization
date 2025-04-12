@@ -48,7 +48,7 @@ def sidebar():
             st.session_state.api_url = api_url
 
         st.divider()
-        st.markdown("### Made with ❤️ using LLM Technology")
+        st.markdown("### Made By [@sadhiin](https://github.com/sadhiin) with ❤️ ")
 
 
 def youtube_input():

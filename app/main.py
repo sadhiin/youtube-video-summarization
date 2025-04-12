@@ -67,7 +67,7 @@ def summarize_youtube_video(
     download_config = YouTubeDownloadConfig(
         url=url,
         media_type=MediaType.AUDIO,
-        output_directory="data/downloads"
+        output_directory=os.path.join(os.path.dirname(__file__), "data/downloads")
     )
 
     downloader = YouTubeDownloader(download_config)

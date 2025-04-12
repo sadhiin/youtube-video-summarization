@@ -12,7 +12,7 @@ from pytubefix import YouTube
 from pytubefix.cli import on_progress
 
 from app.models.schemas import MediaType, YouTubeDownloadConfig, YouTubeMedia
-
+from app.utils.logger import logging
 
 class YouTubeDownloader:
     """Class to handle downloading YouTube videos and audio."""
@@ -70,17 +70,17 @@ class YouTubeDownloader:
             video_stream = self.yt.streams.get_highest_resolution()
             output_path = self._get_filename("mp4")
 
-            print(f"Downloading video: {self.yt.title}")
+            logging.info(f"Downloading video: {self.yt.title}")
             if self.config.save_file:
                 video_stream.download(filename=output_path)
-                print(f"Video saved to: {output_path}")
+                logging.info(f"Video saved to: {output_path}")
                 return output_path
             else:
-                print("Video processed in memory (not saved)")
+                logging.info("Video processed in memory (not saved)")
                 return ""
 
         except Exception as e:
-            print(f"Error downloading video: {str(e)}")
+            logging.error(f"Error downloading video: {str(e)}")
             raise
 
     def download_audio(self) -> str:
@@ -93,18 +93,18 @@ class YouTubeDownloader:
         try:
             audio_stream = self.yt.streams.filter(only_audio=True).order_by('abr').last()
             output_path = self._get_filename("mp3")
-
-            print(f"Downloading audio: {self.yt.title}")
+            logging.debug(f"Output path:{output_path}")
+            logging.info(f"Downloading audio: {self.yt.title}")
             if self.config.save_file:
                 audio_stream.download(filename=output_path)
-                print(f"Audio saved to: {output_path}")
+                logging.info(f"Audio saved to: {output_path}")
                 return output_path
             else:
-                print("Audio processed in memory (not saved)")
+                logging.info("Audio processed in memory (not saved)")
                 return ""
 
         except Exception as e:
-            print(f"Error downloading audio: {str(e)}")
+            logging.error(f"Error downloading audio: {str(e)}")
             raise
 
     def download(self) -> YouTubeMedia:

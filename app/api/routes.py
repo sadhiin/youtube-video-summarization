@@ -1,7 +1,7 @@
 """
 API routes for the YouTube Video Summarizer application.
 """
-
+import traceback
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query, Path
 from pydantic import BaseModel
@@ -17,9 +17,9 @@ from app.core.youtube_downloader import YouTubeDownloader
 from app.core.transcriber import AudioTranscriber
 from app.core.summarizer import TranscriptSummarizer
 from app.db.crud import get_stored_summary, store_summary, video_exists
-from app.db.database import get_db
-from app.db.models import DBSession
+from app.db.database import get_db, DBSession
 from app.utils.vector_store import add_to_vector_db, search_similar_videos
+from app.utils.logger import logging
 
 # Create API router
 router = APIRouter(prefix="/api/v1", tags=["youtube"])
@@ -100,6 +100,7 @@ async def summarize_video(
         # Get basic video info first
         config = YouTubeDownloadConfig(url=request.url, media_type=MediaType.AUDIO)
         downloader = YouTubeDownloader(config)
+        logging.info(f"Downloading video with config: {config}")
         media_info = downloader.get_media_info()
 
         # Start background processing
@@ -120,6 +121,8 @@ async def summarize_video(
         )
 
     except Exception as e:
+        logging.error(f"Error processing video: {str(e)}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing video: {str(e)}")
 
 
@@ -170,6 +173,8 @@ async def chat_with_video(
         )
         return response
     except Exception as e:
+        logging.error(f"Error generating response: {str(e)}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error generating response: {str(e)}")
 
 
@@ -205,6 +210,8 @@ async def search_videos(
 
         return results
     except Exception as e:
+        logging.error(f"Error searching videos: {str(e)}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error searching videos: {str(e)}")
 
 
@@ -246,5 +253,5 @@ async def process_video_in_background(url: str, model: str, db: DBSession):
                 text=summary.transcript_text
             )
     except Exception as e:
-        print(f"Background processing error: {str(e)}")
-        # Log the error properly in a production environment
+        logging.error(f"Background processing error: {str(e)}")
+        logging.error(traceback.format_exc())
