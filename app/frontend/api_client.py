@@ -26,23 +26,31 @@ class ApiClient:
         """Get the full URL for an endpoint."""
         return urljoin(self.api_base, endpoint)
 
-    def summarize_video(self, url: str, force_refresh: bool = False) -> Dict[str, Any]:
+    def summarize_video(self, url: str, force_refresh: bool = False, num_lines: int = 5, selective_keywords: Optional[str] = None) -> Dict[str, Any]:
         """
         Request a video summary.
 
         Args:
             url: YouTube video URL
             force_refresh: Whether to force regeneration of the summary
+            num_lines: Desired number of lines for the summary
+            selective_keywords: Optional comma-separated keywords to focus on
 
         Returns:
             Dictionary with video ID, title, and summary status
         """
+        payload = {
+            "url": url,
+            "force_refresh": force_refresh,
+            "num_lines": num_lines
+        }
+
+        if selective_keywords:
+            payload["selective_keywords"] = selective_keywords
+
         response = requests.post(
             self._url("summarize"),
-            json={
-                "url": url,
-                "force_refresh": force_refresh
-            }
+            json=payload
         )
 
         response.raise_for_status()

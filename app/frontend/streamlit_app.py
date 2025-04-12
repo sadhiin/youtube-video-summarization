@@ -6,7 +6,7 @@ import streamlit as st
 import time
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
-import os   
+import os
 from app.frontend.api_client import ApiClient
 from app.frontend.components import (
     header, sidebar, youtube_input, display_summary,
@@ -33,13 +33,15 @@ def init_session_state():
         st.session_state.chat_history = []
 
 
-def process_youtube_url(url: str, force_refresh: bool = False):
+def process_youtube_url(url: str, force_refresh: bool = False, num_lines: int = 5, selective_keywords: Optional[str] = None):
     """
     Process a YouTube URL to get a summary.
 
     Args:
         url: YouTube URL
         force_refresh: Whether to force regeneration of the summary
+        num_lines: Desired number of lines for the summary
+        selective_keywords: Optional comma-separated keywords to focus on
 
     Returns:
         Video summary or error message
@@ -54,7 +56,7 @@ def process_youtube_url(url: str, force_refresh: bool = False):
 
         # Request summary
         with loading_spinner("Requesting video summary..."):
-            result = client.summarize_video(url, force_refresh)
+            result = client.summarize_video(url, force_refresh, num_lines, selective_keywords)
 
         # If processing in background, wait for completion
         if "summary" in result and result["summary"] == "Processing in background. Please check back shortly.":
@@ -117,11 +119,11 @@ def home_view():
     Enter a YouTube URL to generate a summary. You can then chat with the video content or search across multiple videos.
     """)
 
-    url, force_refresh = youtube_input()
+    url, force_refresh, num_lines, selective_keywords = youtube_input()
 
     if url:
         # Process the URL
-        result = process_youtube_url(url, force_refresh)
+        result = process_youtube_url(url, force_refresh, num_lines, selective_keywords)
 
         if "error" in result:
             display_error(result["error"])
@@ -167,7 +169,8 @@ def home_view():
     if "sample_url" in st.session_state:
         url = st.session_state.sample_url
         del st.session_state.sample_url
-        result = process_youtube_url(url, False)
+        # Use default values for samples
+        result = process_youtube_url(url, False, 5, None)
 
         if "error" in result:
             display_error(result["error"])
@@ -269,7 +272,8 @@ def main():
     # Set up the UI
     header()
     sidebar()
-
+    with st.sidebar:
+        debug_mode = st.checkbox("Debug Mode", value=False)
     # Initialize session state
     init_session_state()
 
@@ -285,6 +289,19 @@ def main():
         st.session_state.current_view = "home"
         home_view()
 
+    def chat_callback(video_id, message, session_id):
+        response = api.chat_with_video(video_id, message, session_id)
+
+        if debug_mode:
+            st.write("Debug Information:")
+            st.write(f"- Video ID: {video_id}")
+            st.write(f"- Session ID: {session_id}")
+            st.write(f"- Sources retrieved: {len(response.get('sources', []))}")
+            if response.get('sources'):
+                st.write("First source sample:")
+                st.code(response['sources'][0]['content'][:200])
+
+        return response
 
 if __name__ == "__main__":
     main()

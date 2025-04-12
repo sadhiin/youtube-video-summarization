@@ -89,78 +89,99 @@ def create_chat_chain(video_id: str, session: ChatSession):
     vector_store = get_vector_store_for_video(video_id)
     print(f"Checking vector store for video {video_id}: {'Found' if vector_store else 'Not found'}")
 
+    # If no vector store, get transcript and create one
     if not vector_store:
-        # Fallback approach: create vector store on the fly
         from app.db.database import get_db
         db = next(get_db())
         stored_summary = get_stored_summary(db, video_id)
 
-        if not stored_summary:
-            print(f"No stored summary found for video {video_id}")
-            raise ValueError(f"No stored summary available for video {video_id}")
+        if not stored_summary or not stored_summary.get("transcript_text"):
+            raise ValueError(f"No transcript available for video {video_id}")
 
-        if not stored_summary.get("transcript_text"):
-            print(f"No transcript text found in stored summary for video {video_id}")
-            raise ValueError(f"No transcript text available for video {video_id}")
+        transcript_text = stored_summary["transcript_text"]
+        print(f"Creating vector store with transcript of length: {len(transcript_text)}")
 
-        # Create embeddings for transcript text
+        # Try to create vector store
         from app.utils.vector_store import add_to_vector_db
-        print(f"Creating vector store for video {video_id}, transcript length: {len(stored_summary['transcript_text'])}")
-        vector_store = add_to_vector_db(video_id, stored_summary["transcript_text"])
+        vector_store = add_to_vector_db(video_id, transcript_text)
 
         if not vector_store:
-            print(f"Failed to create vector store for video {video_id}")
-            # Try one more approach - create a very simple vector store with minimal content
-            try:
-                # Create a simple document with the first 1000 characters of transcript
-                doc = Document(
-                    page_content=stored_summary["transcript_text"][:1000],
-                    metadata={"video_id": video_id, "chunk_id": 0, "source": "transcript"}
-                )
+            # Emergency fallback: create minimal vector store directly here
+            print("Creating emergency vector store...")
+            from langchain_community.vectorstores import FAISS
+            from langchain.docstore.document import Document
 
-                # Initialize embeddings
-                embeddings = get_embedding_model()
+            # Split text into smaller chunks for emergency storage
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=100
+            )
+            docs = []
+            for i, chunk in enumerate(text_splitter.split_text(transcript_text)):
+                docs.append(Document(
+                    page_content=chunk,
+                    metadata={"source": "transcript", "chunk_id": i, "video_id": video_id}
+                ))
 
-                # Create vector store with a single document
-                vector_store = FAISS.from_documents([doc], embeddings)
+            if not docs:
+                # Last resort: use whole transcript as one chunk
+                docs = [Document(
+                    page_content=transcript_text[:9000],  # Limit to first 9000 chars
+                    metadata={"source": "emergency_transcript", "video_id": video_id}
+                )]
 
-                # Add to global registry
-                from app.utils.vector_store import _VIDEO_VECTOR_STORES
-                _VIDEO_VECTOR_STORES[video_id] = vector_store
-                print(f"Created emergency fallback vector store for video {video_id}")
-            except Exception as e:
-                print(f"Failed to create emergency vector store: {e}")
-                import traceback
-                print(traceback.format_exc())
+            # Create vector store directly
+            embeddings = get_embedding_model()
+            vector_store = FAISS.from_documents(docs, embeddings)
+            print(f"Created emergency vector store with {len(docs)} documents")
 
     if not vector_store:
-        raise ValueError(f"No vector store available for video {video_id}")
+        raise ValueError("Failed to create vector store for this video")
 
-    # Create retriever with contextual compression
-    base_retriever = vector_store.as_retriever(search_kwargs={"k": 5})
+    # Test retriever functionality
+    test_retrieval = vector_store.similarity_search("test", k=1)
+    print(f"Test retrieval returned {len(test_retrieval)} documents")
+    if test_retrieval:
+        print(f"Sample content length: {len(test_retrieval[0].page_content)}")
 
-    # Initialize embeddings for filtering
+    # Create retriever with better search parameters
+    base_retriever = vector_store.as_retriever(
+        search_type="similarity",  # Explicitly set search type
+        search_kwargs={
+            "k": 5,  # Return 5 most relevant chunks
+            "fetch_k": 10  # Consider more chunks before filtering
+        }
+    )
+
+    # Create contextual compression for better filtering
     embeddings = get_embedding_model()
-    embeddings_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.7)
+    embeddings_filter = EmbeddingsFilter(
+        embeddings=embeddings,
+        similarity_threshold=0.65  # Slightly lower threshold to get more results
+    )
+
     retriever = ContextualCompressionRetriever(
         base_compressor=embeddings_filter,
         base_retriever=base_retriever
     )
 
-    # Create chat prompt - properly formatted for ConversationalRetrievalChain
+    # Create improved system prompt template
     system_template = """
     You are an AI assistant that helps users understand YouTube video content.
     You have access to the transcript of the video they're asking about.
 
-    Answer the user's question based on the transcript provided.
-    Be concise and accurate. If the transcript doesn't contain the information
-    to answer the question, just say so instead of making up information.
+    Below is the relevant context from the video transcript:
 
-    Transcript context:
     {context}
 
-    Chat history:
+    Previous conversation history:
     {chat_history}
+
+    Based ONLY on the information provided in the transcript context above,
+    answer the user's question thoroughly and accurately.
+
+    If the transcript doesn't contain information to answer the question,
+    be honest and say you don't have that information from the video.
     """
 
     prompt = ChatPromptTemplate.from_messages([
@@ -168,15 +189,16 @@ def create_chat_chain(video_id: str, session: ChatSession):
         ("human", "{question}")
     ])
 
-    # Create conversational chain with explicit document variable mapping
+    # Create conversational chain with explicit parameters
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=retriever,
         memory=session.memory,
         return_source_documents=True,
+        verbose=True,  # Enable verbose mode for debugging
         combine_docs_chain_kwargs={
             "prompt": prompt,
-            "document_variable_name": "context" 
+            "document_variable_name": "context"
         }
     )
 
@@ -186,15 +208,6 @@ def create_chat_chain(video_id: str, session: ChatSession):
 def get_chat_response(video_id: str, message: str, db: Session, session_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Get a chat response for a question about a video.
-
-    Args:
-        video_id: YouTube video ID
-        message: User's message/question
-        db: Database session
-        session_id: Optional session ID for continuing a conversation
-
-    Returns:
-        Dictionary with answer and sources
     """
     session = ChatSession(video_id, session_id)
     session.load_history_from_db(db)
@@ -223,11 +236,25 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
         # Create chain
         chain = create_chat_chain(video_id, session)
 
+        # Test retrieval directly
+        vector_store = get_vector_store_for_video(video_id)
+        if vector_store:
+            test_docs = vector_store.similarity_search(message, k=3)
+            print(f"Direct search found {len(test_docs)} relevant chunks")
+            print(f"Sample chunk: {test_docs[0].page_content[:100] if test_docs else 'None'}")
+
         # Get response
+        print(f"Processing question: {message}")
         response = chain.invoke({
             "question": message,
             "chat_history": session.memory.chat_memory.messages
         })
+
+        # Check if we got content from the context
+        if "source_documents" in response and response["source_documents"]:
+            print(f"Retrieved {len(response['source_documents'])} source documents")
+        else:
+            print("WARNING: No source documents were retrieved!")
 
         # Save interaction to database
         session.save_interaction(db, message, response["answer"])
@@ -247,59 +274,51 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
             "session_id": session.session_id
         }
     except ValueError as e:
-        # Handle the case where no vector store is available (no transcript)
+        # Handle the case where no vector store is available
         error_msg = str(e)
         print(f"Error in chat response: {error_msg}")
 
-        if "No vector store available" in error_msg:
-            # Try a direct approach without vector store
-            try:
-                # If we get here, we have the transcript but couldn't create a vector store
-                # Let's try to use the LLM directly with the first part of the transcript
-                llm = init_chat_model(
-                    model=config.DEFAULT_SUMMARY_MODEL,
-                    model_provider="groq",
-                    temperature=0.3
-                )
+        # Try direct approach using the complete transcript
+        try:
+            llm = init_chat_model(
+                model=config.DEFAULT_SUMMARY_MODEL,
+                model_provider="groq",
+                temperature=0.3
+            )
 
-                # Create a simple prompt with the first part of the transcript
-                transcript_excerpt = stored_summary["transcript_text"][:2000]  # First 2000 chars
+            # Create a direct prompt using full transcript (or beginning portion)
+            transcript_text = stored_summary["transcript_text"]
+            # Only use first 3000 chars to avoid context length issues
+            transcript_excerpt = transcript_text[:3000]
 
-                direct_prompt = ChatPromptTemplate.from_messages([
-                    ("system", f"""You are an AI assistant that helps users understand YouTube video content.
-                    Here's a part of the video transcript:
+            direct_prompt = ChatPromptTemplate.from_messages([
+                ("system", f"""You are an AI assistant that helps users understand YouTube video content.
+                Here's a part of the video transcript (the beginning of the video):
 
-                    {transcript_excerpt}
+                {transcript_excerpt}
 
-                    Answer the user's question based on this excerpt. If you can't answer from this excerpt,
-                    say that you have limited information from the transcript."""),
-                    ("human", "{question}")
-                ])
+                Answer the user's question based on this excerpt. If you can't answer from this excerpt,
+                say that you have limited information from the transcript."""),
+                ("human", "{question}")
+            ])
 
-                chain = direct_prompt | llm
-                response = chain.invoke({"question": message})
+            chain = direct_prompt | llm
+            response = chain.invoke({"question": message})
 
-                session.save_interaction(db, message, response.content)
+            session.save_interaction(db, message, response.content)
 
-                return {
-                    "answer": response.content,
-                    "sources": [],
-                    "session_id": session.session_id
-                }
-            except Exception as direct_error:
-                print(f"Direct approach also failed: {direct_error}")
-                # Fallback to user-friendly response
-                return {
-                    "answer": "I'm sorry, but I'm having trouble processing the transcript for this video. Please try summarizing the video again.",
-                    "sources": [],
-                    "session_id": session.session_id
-                }
-        # For other errors
-        return {
-            "answer": f"I encountered an error while trying to answer your question: {error_msg}",
-            "sources": [],
-            "session_id": session.session_id
-        }
+            return {
+                "answer": response.content,
+                "sources": [],
+                "session_id": session.session_id
+            }
+        except Exception as direct_error:
+            print(f"Direct approach also failed: {direct_error}")
+            return {
+                "answer": "I'm having trouble processing the transcript. Please try again or summarize the video again.",
+                "sources": [],
+                "session_id": session.session_id
+            }
     except Exception as e:
         print(f"Unexpected error in chat_handler: {str(e)}")
         import traceback

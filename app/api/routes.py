@@ -31,6 +31,8 @@ class VideoRequest(BaseModel):
     url: str
     model: Optional[str] = "llama-3.3-70b-versatile"
     force_refresh: Optional[bool] = False
+    num_lines: Optional[int] = 5
+    selective_keywords: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
@@ -109,6 +111,8 @@ async def summarize_video(
             process_video_in_background,
             url=request.url,
             model=request.model,
+            num_lines=request.num_lines,
+            selective_keywords=request.selective_keywords,
             db=db
         )
 
@@ -237,13 +241,18 @@ def extract_video_id(url: str) -> Optional[str]:
     return None
 
 
-async def process_video_in_background(url: str, model: str, db: DBSession):
+async def process_video_in_background(url: str, model: str, num_lines: int = 5, selective_keywords: Optional[str] = None, db: DBSession = None):
     """Process a video in the background and store results in DB."""
     from app.main import summarize_youtube_video
 
     try:
         # Process the video
-        summary = summarize_youtube_video(url=url, groq_model=model)
+        summary = summarize_youtube_video(
+            url=url,
+            groq_model=model,
+            num_lines=num_lines,
+            selective_keywords=selective_keywords
+        )
 
         if not summary.transcript_text:
             logging.warning(f"No transcript text generated for video {summary.media_info.video_id}")

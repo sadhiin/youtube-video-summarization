@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 from dotenv import load_dotenv
+from typing import Optional
 
 from app.models.schemas import (
     MediaType,
@@ -53,6 +54,8 @@ def save_summary(summary: VideoSummary, output_file: str = None):
 def summarize_youtube_video(
     url: str,
     groq_model: str = config.DEFAULT_SUMMARY_MODEL,
+    num_lines: int = 5,
+    selective_keywords: Optional[str] = None,
     output_file: str = None
 ) -> VideoSummary:
     """
@@ -61,6 +64,8 @@ def summarize_youtube_video(
     Args:
         url: YouTube video URL
         groq_model: Groq language model to use for summarization
+        num_lines: The desired number of lines for the summary
+        selective_keywords: Optional comma-separated keywords to focus on in the summary
         output_file: Optional file path to save the summary
 
     Returns:
@@ -97,6 +102,8 @@ def summarize_youtube_video(
         model=groq_model,
         temperature=0.0,
         max_tokens=1024,
+        num_lines=num_lines,
+        selective_keywords=selective_keywords
     )
 
     summarizer = TranscriptSummarizer()

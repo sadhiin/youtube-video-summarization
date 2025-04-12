@@ -57,8 +57,19 @@ class TranscriptSummarizer:
             max_tokens=config.max_tokens
         )
 
+        # Construct dynamic prompt based on num_lines and selective_keywords
+        system_prompt = "You are an expert summarizer. Create a concise summary of the following transcript from a YouTube video"
+
+        if config.num_lines:
+            system_prompt += f" in exactly {config.num_lines} lines"
+
+        if config.selective_keywords:
+            system_prompt += f". Focus on these keywords: {config.selective_keywords}"
+
+        system_prompt += ":\n\n{text}"
+
         summary_prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert summarizer. Create a concise summary of the following transcript from a YouTube video:\n\n{text}")
+            ("system", system_prompt)
         ])
 
         # For shorter transcripts: use the "stuff" method
@@ -70,8 +81,16 @@ class TranscriptSummarizer:
         # For longer transcripts: use map-reduce
         else:
             # First summarize each chunk
+            # Construct dynamic prompt for chunk summarization
+            map_system_prompt = "Summarize this part of a transcript"
+
+            if config.selective_keywords:
+                map_system_prompt += f", focusing on these keywords: {config.selective_keywords}"
+
+            map_system_prompt += ":\n\n{text}"
+
             map_prompt = ChatPromptTemplate.from_messages([
-                ("system", "Summarize this part of a transcript:\n\n{text}")
+                ("system", map_system_prompt)
             ])
             map_chain = map_prompt | llm
 
@@ -81,8 +100,19 @@ class TranscriptSummarizer:
                 interim_summaries.append(interim_summary.content)
 
             # Then combine the summaries
+            # Construct dynamic prompt for final summarization
+            reduce_system_prompt = "Combine these partial summaries into a coherent overall summary"
+
+            if config.num_lines:
+                reduce_system_prompt += f" in exactly {config.num_lines} lines"
+
+            if config.selective_keywords:
+                reduce_system_prompt += f", focusing on these keywords: {config.selective_keywords}"
+
+            reduce_system_prompt += ":\n\n{summaries}"
+
             reduce_prompt = ChatPromptTemplate.from_messages([
-                ("system", "Combine these partial summaries into a coherent overall summary:\n\n{summaries}")
+                ("system", reduce_system_prompt)
             ])
             reduce_chain = reduce_prompt | llm
 

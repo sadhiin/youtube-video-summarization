@@ -60,6 +60,8 @@ class SummaryConfig(BaseModel):
     max_tokens: int = 1024
     chunk_size: int = 4000
     chunk_overlap: int = 400
+    num_lines: Optional[int] = 5
+    selective_keywords: Optional[str] = None
 
 
 class VideoSummary(BaseModel):
