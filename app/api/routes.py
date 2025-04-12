@@ -88,11 +88,11 @@ async def summarize_video(
         if stored_summary:
             return SummaryResponse(
                 video_id=video_id,
-                title=stored_summary.title,
-                author=stored_summary.author,
-                summary=stored_summary.summary,
-                audio_available=bool(stored_summary.audio_path),
-                transcript_available=bool(stored_summary.transcript_path),
+                title=stored_summary["title"],
+                author=stored_summary["author"],
+                summary=stored_summary["summary"],
+                audio_available=bool(stored_summary["audio_path"]),
+                transcript_available=bool(stored_summary["transcript_path"]),
                 cached=True
             )
 
