@@ -5,6 +5,8 @@ import time
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, field_validator
+from app.config import config
+import os
 
 
 class MediaType(str, Enum):
@@ -19,7 +21,7 @@ class YouTubeDownloadConfig(BaseModel):
     url: str
     media_type: MediaType = MediaType.AUDIO
     output_filename: Optional[str] = None
-    output_directory: str ="data/downloads"
+    output_directory: str = os.path.join(config.BASE_DIR, "data/downloads")
     save_file: bool = True
 
     @field_validator('url')

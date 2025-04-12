@@ -11,6 +11,7 @@ from groq import Groq
 
 from app.models.schemas import YouTubeMedia, TranscriptionConfig
 from app.utils.logger import logging
+from app.config import config
 
 class AudioTranscriber:
     """Class to handle audio transcription operations."""
@@ -47,13 +48,12 @@ class AudioTranscriber:
 
         # Define transcript path
         audio_file_path = Path(media.audio_path)
-        transcript_dir = Path("data/transcripts")
+        transcript_dir = Path(os.path.join(config.BASE_DIR, "data", "transcripts"))
         transcript_dir.mkdir(parents=True, exist_ok=True)
 
         transcript_path = transcript_dir / f"{audio_file_path.stem}.json"
 
         # Perform transcription
-        # logging.info(f"Transcribing audio file: {media.audio_path}")
         logging.info(f"Transcribing audio file: {media.audio_path}")
 
         with open(media.audio_path, "rb") as audio_file:

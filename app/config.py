@@ -20,8 +20,10 @@ class Config:
     APP_VERSION = "0.1.1"
 
     # Data directories
-    BASE_DIR = Path(__file__).parent.parent.absolute()
-    DATA_DIR = BASE_DIR / "data"
+    # BASE_DIR = Path(__file__).parent.parent.absolute()
+    BASE_DIR = Path('./')
+    # DATA_DIR = BASE_DIR / "data"
+    DATA_DIR = Path("data")
     DOWNLOADS_DIR = DATA_DIR / "downloads"
     TRANSCRIPTS_DIR = DATA_DIR / "transcripts"
     SUMMARIES_DIR = DATA_DIR / "summaries"

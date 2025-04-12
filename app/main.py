@@ -18,19 +18,22 @@ from app.models.schemas import (
 from app.core.youtube_downloader import YouTubeDownloader
 from app.core.transcriber import AudioTranscriber
 from app.core.summarizer import TranscriptSummarizer
+from app.config import config
 
 
 def init_directories():
     """Create necessary directories for storing data."""
-    os.makedirs("data/downloads", exist_ok=True)
-    os.makedirs("data/transcripts", exist_ok=True)
-    os.makedirs("data/summaries", exist_ok=True)
+    # Use absolute paths from the project root
+    os.makedirs(os.path.join(config.BASE_DIR, "data", "downloads"), exist_ok=True)
+    os.makedirs(os.path.join(config.BASE_DIR, "data", "transcripts"), exist_ok=True)
+    os.makedirs(os.path.join(config.BASE_DIR, "data", "summaries"), exist_ok=True)
 
 
 def save_summary(summary: VideoSummary, output_file: str = None):
     """Save the summary to a JSON file."""
     if output_file is None:
-        output_dir = Path("data/summaries")
+        output_dir = Path(os.path.join(config.BASE_DIR, "data", "summaries"))
+        output_dir.mkdir(parents=True, exist_ok=True)
         video_id = summary.media_info.video_id or "unknown"
         output_file = output_dir / f"{video_id}_summary.json"
     else:
@@ -63,11 +66,14 @@ def summarize_youtube_video(
     Returns:
         VideoSummary object
     """
+    # Get the project root directory path from config
+    project_root = config.BASE_DIR
+
     # 1. Download YouTube audio
     download_config = YouTubeDownloadConfig(
         url=url,
         media_type=MediaType.AUDIO,
-        output_directory=os.path.join(os.path.dirname(__file__), "data/downloads")
+        output_directory=os.path.join(project_root, "data", "downloads")
     )
 
     downloader = YouTubeDownloader(download_config)

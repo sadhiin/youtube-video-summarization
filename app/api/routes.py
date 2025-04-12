@@ -240,6 +240,8 @@ async def process_video_in_background(url: str, model: str, db: DBSession):
     from app.main import summarize_youtube_video
 
     try:
+        logging.info(f"Processing video in background: {url}")
+        logging.info(f"Using model: {model}")
         # Process the video
         summary = summarize_youtube_video(url=url, groq_model=model)
 
