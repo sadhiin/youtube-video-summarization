@@ -66,8 +66,14 @@ def add_to_vector_db(video_id: str, text: str):
         video_id: YouTube video ID
         text: Transcript text
     """
-    if not text or len(text.strip()) < 10:
-        print(f"Warning: Transcript for video {video_id} is too short or empty")
+    if not text:
+        print(f"Error: Transcript for video {video_id} is empty")
+        return None
+
+    # Strip and check the text length
+    cleaned_text = text.strip()
+    if len(cleaned_text) < 10:
+        print(f"Error: Transcript for video {video_id} is too short ({len(cleaned_text)} chars)")
         return None
 
     # Create the folder for this video's index
@@ -82,8 +88,13 @@ def add_to_vector_db(video_id: str, text: str):
     )
 
     # Create documents with metadata
-    chunks = text_splitter.split_text(text)
+    chunks = text_splitter.split_text(cleaned_text)
     print(f"Split transcript into {len(chunks)} chunks for vector storage")
+
+    # Ensure we have chunks to work with
+    if not chunks:
+        print(f"Error: No chunks were created from transcript for video {video_id}")
+        return None
 
     documents = [
         Document(
@@ -115,6 +126,8 @@ def add_to_vector_db(video_id: str, text: str):
         return vector_store
     except Exception as e:
         print(f"Error creating vector store for video {video_id}: {e}")
+        import traceback
+        print(traceback.format_exc())
         return None
 
 

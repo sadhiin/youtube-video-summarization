@@ -245,15 +245,42 @@ async def process_video_in_background(url: str, model: str, db: DBSession):
         # Process the video
         summary = summarize_youtube_video(url=url, groq_model=model)
 
+        if not summary.transcript_text:
+            logging.warning(f"No transcript text generated for video {summary.media_info.video_id}")
+        else:
+            logging.info(f"Generated transcript of length {len(summary.transcript_text)} for video {summary.media_info.video_id}")
+
         # Store in database
         store_summary(db, summary)
+        logging.info(f"Stored summary in database for video {summary.media_info.video_id}")
 
         # Add to vector database for searching
         if summary.transcript_text:
-            add_to_vector_db(
+            from app.utils.vector_store import add_to_vector_db, get_vector_store_for_video
+
+            vector_store = add_to_vector_db(
                 video_id=summary.media_info.video_id,
                 text=summary.transcript_text
             )
+
+            if vector_store:
+                logging.info(f"Successfully added transcript to vector store for video {summary.media_info.video_id}")
+            else:
+                logging.error(f"Failed to add transcript to vector store for video {summary.media_info.video_id}")
+
+                # Try again with a different approach - sometimes the first attempt fails
+                logging.info(f"Trying again to create vector store for video {summary.media_info.video_id}")
+                vector_store = add_to_vector_db(
+                    video_id=summary.media_info.video_id,
+                    text=summary.transcript_text
+                )
+
+                if vector_store:
+                    logging.info(f"Second attempt succeeded - created vector store for video {summary.media_info.video_id}")
+                else:
+                    logging.error(f"Second attempt also failed - could not create vector store for video {summary.media_info.video_id}")
+        else:
+            logging.warning(f"No transcript text available to add to vector store for video {summary.media_info.video_id}")
     except Exception as e:
         logging.error(f"Background processing error: {str(e)}")
         logging.error(traceback.format_exc())
