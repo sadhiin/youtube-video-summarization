@@ -29,7 +29,7 @@ def header():
 def sidebar():
     """Display the sidebar with app information and options."""
     with st.sidebar:
-        st.image("https://raw.githubusercontent.com/streamlit/streamlit/master/examples/data/logo.png", width=100)
+        st.image("https://user-images.githubusercontent.com/47686437/168548113-b3cd4206-3281-445b-b7c6-bc0a3251293d.png", width=100)
         st.title("YouTube Summarizer")
 
         st.markdown("## About")
