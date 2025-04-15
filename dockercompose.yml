@@ -1,0 +1,48 @@
+version: 3.10
+
+services:
+  backend:
+    build:
+      container_name: youtube_summarizer_backend
+      env_file:
+        - .env
+      command: ["uvicorn", "app.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+      # storage voluem
+      volumes:
+        - ./data : /app/data
+        - ./logs : /app/logs
+
+      ports:
+        - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/youtube_summarizer.db # Example for SQLite
+      - LOG_FILE=/app/logs/youtubesummarizerlogger.log
+    
+    networks:
+      - summarizer-net
+
+
+  frontend:
+    build:
+      container_name: youtube_summarizer_frontend
+      env_file:
+        - .env
+      command: ["streamlit", "run", "app/frontend/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false"]
+      ports:
+        - "8501:8501"
+      volumes:
+        - ./data:/app/data
+        - ./logs:/app/logs
+      environment:
+        - BACKEND_URL=http://backend:8000
+        - LOG_FILE=/app/logs/youtubesummarizerlogger.log
+      depends_on:
+        - backend
+      networks:
+        - summarizer-net
+
+
+networks:
+  summarizer-net:
+    driver: bridge
