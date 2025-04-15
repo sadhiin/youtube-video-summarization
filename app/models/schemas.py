@@ -57,8 +57,8 @@ class SummaryConfig(BaseModel):
     """Configuration for summarization operations."""
     model: str
     temperature: float = 0.0
-    max_tokens: int = 1024
-    chunk_size: int = 4000
+    max_tokens: int = 2048
+    chunk_size: int = 2048
     chunk_overlap: int = 400
     num_lines: Optional[int] = 5
     selective_keywords: Optional[str] = None

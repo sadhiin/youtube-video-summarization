@@ -50,7 +50,7 @@ class AudioTranscriber:
         # Define transcript path
         audio_file_path = Path(media.audio_path)
         # transcript_dir = Path(os.path.join(config.BASE_DIR, "data", "transcripts"))
-        transcript_dir = Path(os.path.join(config.BASE_DIR, "data", "transcripts"))
+        transcript_dir = Path(config.TRANSCRIPTS_DIR)
         transcript_dir.mkdir(parents=True, exist_ok=True)
 
         transcript_path = transcript_dir / f"{audio_file_path.stem}.json"

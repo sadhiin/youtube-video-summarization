@@ -19,7 +19,7 @@ from app.db.crud import add_chat_message, get_chat_history, get_stored_summary
 from app.db.models import Video, Transcript
 from app.utils.vector_store import get_vector_store_for_video
 
-from app.embeddings.get_embedding_model import get_embedding_model
+from app.embeddings.get_embedding_model import initalize_embedding_model
 from langchain_community.vectorstores import FAISS
 from langchain.docstore.document import Document
 # Chat system prompt
@@ -131,7 +131,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
                 )]
 
             # Create vector store directly
-            embeddings = get_embedding_model()
+            embeddings = initalize_embedding_model()
             vector_store = FAISS.from_documents(docs, embeddings)
             print(f"Created emergency vector store with {len(docs)} documents")
 
@@ -146,7 +146,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
 
     # Create retriever with better search parameters
     base_retriever = vector_store.as_retriever(
-        search_type="similarity",  # Explicitly set search type
+        search_type="similarity",
         search_kwargs={
             "k": 5,  # Return 5 most relevant chunks
             "fetch_k": 10  # Consider more chunks before filtering
@@ -154,7 +154,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
     )
 
     # Create contextual compression for better filtering
-    embeddings = get_embedding_model()
+    embeddings = initalize_embedding_model()
     embeddings_filter = EmbeddingsFilter(
         embeddings=embeddings,
         similarity_threshold=0.65  # Slightly lower threshold to get more results
