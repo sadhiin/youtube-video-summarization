@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 from app.config import config
-import os
 
 
 class MediaType(str, Enum):
@@ -36,6 +35,7 @@ class YouTubeMedia(BaseModel):
     video_id: str = ""
     title: str
     author: str
+    url: str
     video_path: Optional[str] = None
     audio_path: Optional[str] = None
     transcript_path: Optional[str] = None
@@ -50,7 +50,7 @@ class TranscriptionConfig(BaseModel):
     prompt: Optional[str] = None
     response_format: str = "verbose_json"
     temperature: float = 0.0
-    # timestamp_granularities: List[str] = ["segment"]
+    timestamp_granularities: List[str] = ["segment"]
 
 
 class SummaryConfig(BaseModel):
@@ -70,4 +70,14 @@ class VideoSummary(BaseModel):
     summary: str
     transcript_text: Optional[str] = None
     transcript_segments: Optional[List[Dict[str, Any]]] = None
+    language: Optional[str] = None
+    model: Optional[str] = None
     created_at: str = Field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))
+
+
+class TranscriptedData(BaseModel):
+    transcript_text: str
+    segments: Optional[List[Dict[str, Any]]] = None
+    file_path: Optional[str] = None
+    model: Optional[str] = None
+    language: Optional[str] = None

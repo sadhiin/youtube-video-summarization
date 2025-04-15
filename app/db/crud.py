@@ -27,7 +27,7 @@ def create_video(db: Session, media: YouTubeMedia) -> Video:
         id=media.video_id,
         title=media.title,
         author=media.author,
-        url="",  # This should be properly set
+        url=media.url,
         audio_path=media.audio_path,
         video_path=media.video_path
     )
@@ -37,9 +37,12 @@ def create_video(db: Session, media: YouTubeMedia) -> Video:
     return video
 
 
-def create_transcript(db: Session, video_id: str, transcript_text: str, file_path: Optional[str] = None,
-                    model: Optional[str] = None, segments: Optional[Dict[str, Any]] = None,
-                    language: Optional[str] = None) -> Transcript:
+def create_transcript(db: Session, 
+                    video_id: str, 
+                    transcript_text: str, 
+                    file_path: Optional[str] = None,
+                    model: Optional[str] = None, 
+                    segments: Optional[Dict[str, Any]] = None, language: Optional[str] = None) -> Transcript:
     """Create a transcript for a video."""
     transcript = Transcript(
         video_id=video_id,
@@ -101,11 +104,14 @@ def get_stored_summary(db: Session, video_id: str) -> Optional[Dict[str, Any]]:
     if not video:
         logging.error(f"Video with ID {video_id} not found in the database.")
         return None
-
+    # TODO: Ensure to have the correct relationships set up in the models
+    # ensure to heave all the properties in the models
+    logging.debug(f"Video found: {video}")
     result = {
         "video_id": video.id,
         "title": video.title,
         "author": video.author,
+        "url": video.url,
         "audio_path": video.audio_path,
         "video_path": video.video_path,
         "transcript_path": None,
@@ -117,11 +123,20 @@ def get_stored_summary(db: Session, video_id: str) -> Optional[Dict[str, Any]]:
     if video.transcript:
         result["transcript_path"] = video.transcript.file_path
         result["transcript_text"] = video.transcript.text
-
+    else:
+        logging.warning(f"Transcript not found for video ID {video_id}.")
     # Get summary if available
     if video.summary:
         result["summary"] = video.summary.text
-
+    if video.chat_history:
+        result["chat_history"] = [
+            {
+                "message": chat.message,
+                "response": chat.response,
+                "created_at": chat.created_at.isoformat()
+            } for chat in video.chat_history
+        ]
+    logging.debug(f"from get_stored_summary return: {result}")
     return result
 
 
@@ -131,11 +146,11 @@ def store_summary(db: Session, summary: VideoSummary) -> None:
 
     This creates or updates entries in videos, transcripts, and summaries tables.
     """
-    # First, check if video exists
+    logging.debug(f"Storing summary for video ID: {summary.media_info.video_id}")
     video = get_video(db, summary.media_info.video_id)
 
     if not video:
-        # Create video entry
+        logging.debug(f"Video not found in the database, creating a new entry with ID: {summary.media_info.video_id}")
         video = create_video(db, summary.media_info)
 
     # Store transcript if available
@@ -153,7 +168,8 @@ def store_summary(db: Session, summary: VideoSummary) -> None:
                 video_id=video.id,
                 transcript_text=summary.transcript_text,
                 file_path=summary.media_info.transcript_path,
-                segments=segments
+                segments=segments,
+                language=summary.language,
             )
 
     # Store summary if available
@@ -161,7 +177,8 @@ def store_summary(db: Session, summary: VideoSummary) -> None:
         create_summary(
             db=db,
             video_id=video.id,
-            summary_text=summary.summary
+            summary_text=summary.summary,
+            model=summary.model
         )
 
     # Commit any pending changes

@@ -78,8 +78,8 @@ def add_to_vector_db(video_id: str, text: str):
 
     # Split text into chunks - INCREASED CHUNK SIZE FOR BETTER CONTEXT
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,  # Increased from 500
-        chunk_overlap=200,  # Increased from 50
+        chunk_size=1000, 
+        chunk_overlap=100,
         separators=["\n\n", "\n", ". ", " ", ""]
     )
 
@@ -100,7 +100,7 @@ def add_to_vector_db(video_id: str, text: str):
                 "video_id": video_id,
                 "chunk_id": i,
                 "source": "transcript",
-                "chunk_length": len(chunk)  # Add length metadata for debugging
+                "chunk_length": len(chunk)
             }
         )
         for i, chunk in enumerate(chunks)
@@ -171,7 +171,7 @@ def search_similar_videos(query: str, limit: int = 5) -> List[str]:
             # Search in this vector store
             similar_docs = vector_store.similarity_search_by_vector(
                 query_embedding,
-                k=2  # Get top 2 chunks from each video
+                k=3  # Get top 2 chunks from each video
             )
 
             if similar_docs:

@@ -81,14 +81,14 @@ def summarize_youtube_video(
         
     transcription_config = TranscriptionConfig()
 
-    transcriber = AudioTranscriber()
+    transcriber = AudioTranscriber(transcription_config)
 
     logging.info("Transcribing audio...")
 
     media = transcriber.transcribe(media, transcription_config)
 
     # 3. Extract transcript text
-    transcript_text = transcriber.get_transcript_text(media)
+    transcript_data = transcriber.get_transcripted_data_info(media)
 
     # 4. Summarize transcript
     summary_config = SummaryConfig(
@@ -101,7 +101,7 @@ def summarize_youtube_video(
 
     summarizer = TranscriptSummarizer()
     print("Generating summary...")
-    summary = summarizer.create_summary(media, transcript_text, summary_config)
+    summary = summarizer.create_summary(media, transcript_data, summary_config)
 
     # 5. Save summary
     if output_file:
