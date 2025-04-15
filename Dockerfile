@@ -1,13 +1,24 @@
 FROM python:3.12-slim
 
-# Set the working directory
 WORKDIR /app
-# Copy the requirements file into the container
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
 COPY . .
-# Install the required packages
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port the app runs on
-EXPOSE 8000, 8501
+#Expose the ports
+EXPOSE 8000 8501
 
-# Run the Streamlit app
+
+CMD ["bash"]

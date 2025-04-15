@@ -1,9 +1,51 @@
-.git
-.venv
+# Git files
+.git/
+.gitignore
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .pytest_cache/
+
+# IDE files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data and Logs (managed by volumes, don't copy into image)
+data/
+logs/
+
+# Local environment variables
 .env
-*.log
+
+# Docker files (don't copy themselves into the image)
+Dockerfile
+docker-compose.yml
+dockercompose.yml
+
+# Other specific files/dirs to exclude
+research/
+*.ipynb
+LICENSE
+README.md
+*.mp3
+*.json
+*.faiss
+*.pkl
+*.db
+
+# If you mount ./app as a volume for development,
+# you might exclude it here for production builds
+# app/
+
