@@ -26,6 +26,9 @@ class YouTubeDownloader:
         """
         self.config = config
         self.yt = YouTube(config.url, on_progress_callback=on_progress)
+        # self.yt = YouTube(config.url, on_progress_callback=on_progress, use_po_token=True, client='WEB')
+
+
 
     def get_media_info(self) -> YouTubeMedia:
         """Extract metadata from YouTube video."""
