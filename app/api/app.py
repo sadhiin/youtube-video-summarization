@@ -13,6 +13,7 @@ from app.config import config
 from app.db.database import init_db
 from app.utils.caching import setup_redis_cache
 from app.utils.vector_store import init_vector_store
+from app.utils.logger import logging
 
 # Create the FastAPI application
 app = FastAPI(
@@ -39,7 +40,7 @@ async def startup_event():
 
     # Initialize vector store
     init_vector_store()
-    print("Vector store initialized")
+    logging.info("Vector store initialized")
 
     # Rebuild vector stores for videos with missing stores but available transcripts
     try:
@@ -51,30 +52,30 @@ async def startup_event():
         from app.db.models import Video
         videos = db_session.query(Video).all()
 
-        print(f"Found {len(videos)} videos in database, checking vector stores...")
+        logging.info(f"Found {len(videos)} videos in database, checking vector stores...")
 
         for video in videos:
             if not get_vector_store_for_video(video.id):
-                print(f"Rebuilding vector store for video {video.id}")
+                logging.info(f"Rebuilding vector store for video {video.id}")
                 # Get summary and check for transcript
                 summary = get_stored_summary(db_session, video.id)
                 if summary and summary.get("transcript_text"):
                     transcript_length = len(summary["transcript_text"])
-                    print(f"Found transcript for video {video.id} with length: {transcript_length}")
+                    logging.info(f"Found transcript for video {video.id} with length: {transcript_length} of transcript text")
 
                     vector_store = add_to_vector_db(video.id, summary["transcript_text"])
                     if vector_store:
-                        print(f"Successfully created vector store for video {video.id}")
+                        logging.info(f"Successfully created vector store for video {video.id}")
                     else:
-                        print(f"Failed to create vector store for video {video.id}")
+                        logging.info(f"Failed to create vector store for video {video.id}")
                 else:
-                    print(f"No transcript text found for video {video.id}")
+                    logging.info(f"No transcript text found for video {video.id}")
 
-        print(f"Vector store initialization complete. {len(_VIDEO_VECTOR_STORES)} vector stores available.")
+        logging.info(f"Vector store initialization complete. {len(_VIDEO_VECTOR_STORES)} vector stores available.")
     except Exception as e:
-        print(f"Error rebuilding vector stores: {e}")
+        logging.error(f"Error rebuilding vector stores: {e}")
         import traceback
-        print(traceback.format_exc())
+        logging.error(traceback.format_exc())
 
     # Set up Redis cache if configured
     if hasattr(config, "REDIS_URL") and config.REDIS_URL:

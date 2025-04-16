@@ -13,10 +13,13 @@ from app.models.schemas import YouTubeMedia, TranscriptionConfig, TranscriptedDa
 from app.utils.logger import logging
 from app.config import config
 
+
 class AudioTranscriber:
     """Class to handle audio transcription operations."""
 
-    def __init__(self, transcribe_config: TranscriptionConfig, api_key: Optional[str] = None):
+    def __init__(
+        self, transcribe_config: TranscriptionConfig, api_key: Optional[str] = None
+    ):
         """
         Initialize the transcriber with API key.
 
@@ -26,7 +29,9 @@ class AudioTranscriber:
         self.transcribe_config = transcribe_config
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
-            raise ValueError("Groq API key is required. Set it in .env file or pass directly.")
+            raise ValueError(
+                "Groq API key is required. Set it in .env file or pass directly."
+            )
 
         self.client = Groq(api_key=self.api_key)
 
@@ -44,8 +49,7 @@ class AudioTranscriber:
         if not media.audio_path:
             raise ValueError("Audio path not found in media object")
 
-        if not os.path.exists(media.audio_path) or \
-              not os.path.isfile(media.audio_path):
+        if not os.path.exists(media.audio_path) or not os.path.isfile(media.audio_path):
             raise FileNotFoundError(f"Audio file not found at {media.audio_path}")
 
         # Define transcript path
@@ -65,7 +69,7 @@ class AudioTranscriber:
                 prompt=self.transcribe_config.prompt,
                 response_format=self.transcribe_config.response_format,
                 timestamp_granularities=self.transcribe_config.timestamp_granularities,
-                temperature=self.transcribe_config.temperature
+                temperature=self.transcribe_config.temperature,
             )
 
         # Save the transcription to a JSON file
@@ -93,22 +97,31 @@ class AudioTranscriber:
         Returns:
             Full transcript data with segments
         """
-        transcript_data= TranscriptedData()
+        transcript_data = TranscriptedData(
+            transcript_text="none",
+            segments=[],
+            file_path=None,
+            model=None,
+            language=None,
+        )
 
         if not media.transcript_path:
             raise ValueError("Transcript path not found in media object")
         logging.debug(f"Loading transcript from: {media.transcript_path}")
-        if not os.path.exists(media.transcript_path) or \
-                not os.path.isfile(media.transcript_path):
-            raise FileNotFoundError(f"Transcript file not found at {media.transcript_path}")
+        if not os.path.exists(media.transcript_path) or not os.path.isfile(
+            media.transcript_path
+        ):
+            raise FileNotFoundError(
+                f"Transcript file not found at {media.transcript_path}"
+            )
         with open(media.transcript_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        
+
         # Extract segments based on response format
         if isinstance(data, dict):
             # For verbose_json format
             if "text" in transcript_data:
-                transcript_data.transcript_text= data["text"]
+                transcript_data.transcript_text = data["text"]
             if "segments" in data:
                 transcript_data.segments = data["segments"]
             if "language" in data:
@@ -116,5 +129,3 @@ class AudioTranscriber:
             if "model" in data:
                 transcript_data.model = data["model"]
         return transcript_data
-    
-

@@ -35,7 +35,8 @@ class YouTubeDownloader:
         return YouTubeMedia(
             video_id=self.yt.video_id,
             title=self.yt.title,
-            author=self.yt.author
+            author=self.yt.author,
+            url=self.yt.watch_url,
         )
 
     def _get_filename(self, extension: str) -> str:

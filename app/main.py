@@ -85,7 +85,7 @@ def summarize_youtube_video(
 
     logging.info("Transcribing audio...")
 
-    media = transcriber.transcribe(media, transcription_config)
+    media = transcriber.transcribe(media)
 
     # 3. Extract transcript text
     transcript_data = transcriber.get_transcripted_data_info(media)
