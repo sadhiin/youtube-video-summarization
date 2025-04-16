@@ -20,34 +20,25 @@ from app.core.youtube_downloader import YouTubeDownloader
 from app.core.transcriber import AudioTranscriber
 from app.core.summarizer import TranscriptSummarizer
 from app.config import config
-
-
-def init_directories():
-    """Create necessary directories for storing data."""
-    # Use absolute paths from the project root
-    os.makedirs(os.path.join(config.BASE_DIR, "data", "downloads"), exist_ok=True)
-    os.makedirs(os.path.join(config.BASE_DIR, "data", "transcripts"), exist_ok=True)
-    os.makedirs(os.path.join(config.BASE_DIR, "data", "summaries"), exist_ok=True)
-
+from app.utils.logger import logging
 
 def save_summary(summary: VideoSummary, output_file: str = None):
     """Save the summary to a JSON file."""
     if output_file is None:
-        output_dir = Path(os.path.join(config.BASE_DIR, "data", "summaries"))
+        output_dir = Path(config.SUMMARIES_DIR)
         output_dir.mkdir(parents=True, exist_ok=True)
         video_id = summary.media_info.video_id or "unknown"
         output_file = output_dir / f"{video_id}_summary.json"
     else:
         output_file = Path(output_file)
 
-    # Convert to dict for serialization
     summary_dict = summary.model_dump()
 
     # Serialize nested models
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(summary_dict, f, indent=2, default=str)
 
-    print(f"Summary saved to: {output_file}")
+    logging.info(f"Summary saved to: {output_file}")
     return output_file
 
 
@@ -71,44 +62,46 @@ def summarize_youtube_video(
     Returns:
         VideoSummary object
     """
-    # Get the project root directory path from config
-    project_root = config.BASE_DIR
 
     # 1. Download YouTube audio
     download_config = YouTubeDownloadConfig(
         url=url,
         media_type=MediaType.AUDIO,
-        output_directory=str(Path(project_root) / "data" / "downloads")
+        output_directory=str(config.DOWNLOADS_DIR)
     )
 
 
     downloader = YouTubeDownloader(download_config)
-    print(f"Downloading audio from: {url}")
+    logging.info(f"Downloading audio from: {url}")
+
     media = downloader.download()
-    print("Download complete.")
-    media_info = downloader.get_media_info()
-    # 2. Transcribe audio
+    logging.info("Download complete.")
+
+    # media_info = downloader.get_media_info()
+        
     transcription_config = TranscriptionConfig()
 
-    transcriber = AudioTranscriber()
-    print("Transcribing audio...")
-    media = transcriber.transcribe(media, transcription_config)
+    transcriber = AudioTranscriber(transcription_config)
+
+    logging.info("Transcribing audio...")
+
+    media = transcriber.transcribe(media)
 
     # 3. Extract transcript text
-    transcript_text = transcriber.get_transcript_text(media)
+    transcript_data = transcriber.get_transcripted_data_info(media)
 
     # 4. Summarize transcript
     summary_config = SummaryConfig(
         model=groq_model,
         temperature=0.0,
-        max_tokens=1024,
+        max_tokens=2048,
         num_lines=num_lines,
         selective_keywords=selective_keywords
     )
 
     summarizer = TranscriptSummarizer()
     print("Generating summary...")
-    summary = summarizer.create_summary(media, transcript_text, summary_config)
+    summary = summarizer.create_summary(media, transcript_data, summary_config)
 
     # 5. Save summary
     if output_file:
@@ -131,9 +124,6 @@ def main():
 
     # Load environment variables
     load_dotenv()
-
-    # Initialize directories
-    init_directories()
 
     # Process the video
     summary = summarize_youtube_video(args.url, args.model, args.output)

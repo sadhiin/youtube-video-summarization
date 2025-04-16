@@ -4,23 +4,23 @@ Vector store operations using FAISS for transcript embeddings.
 
 import os
 import json
+import traceback
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
-# from langchain.embeddings import init_embeddings
-from app.embeddings.get_embedding_model import get_embedding_model
-# from langchain.vectorstores.faiss import FAISS
+from app.embeddings.get_embedding_model import initalize_embedding_model
 from langchain_community.vectorstores import FAISS
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from app.config import config
+from app.utils.logger import logging
 
 # Global storage for vector stores
 _VIDEO_VECTOR_STORES = {}
 
 # Directory for storing FAISS indices
-VECTOR_DIR = config.BASE_DIR / "data" / "vector_indices"
+VECTOR_DIR = config.DATA_DIR / "vector_indices"
 
 
 def init_vector_store():
@@ -37,7 +37,7 @@ def _load_existing_indices():
         return
 
     # Get embeddings
-    embeddings = get_embedding_model()
+    embeddings = initalize_embedding_model()
 
     # Load each index
     for video_dir in indices_dir.iterdir():
@@ -48,9 +48,9 @@ def _load_existing_indices():
                 try:
                     vector_store = FAISS.load_local(str(index_path), embeddings, allow_dangerous_deserialization=True)
                     _VIDEO_VECTOR_STORES[video_id] = vector_store
-                    print(f"Loaded vector index for video {video_id}")
+                    logging.info(f"Loaded vector index for video {video_id}")
                 except Exception as e:
-                    print(f"Error loading vector index for video {video_id}: {e}")
+                    logging.error(f"Error loading vector index for video {video_id}: {e}")
 
 
 def get_vector_store_for_video(video_id: str) -> Optional[FAISS]:
@@ -63,13 +63,13 @@ def add_to_vector_db(video_id: str, text: str):
     Add a transcript to the vector database.
     """
     if not text:
-        print(f"Error: Transcript for video {video_id} is empty")
+        logging.error(f"Error: Transcript for video {video_id} is empty")
         return None
 
     # Strip and check the text length
     cleaned_text = text.strip()
     if len(cleaned_text) < 10:
-        print(f"Error: Transcript for video {video_id} is too short ({len(cleaned_text)} chars)")
+        logging.error(f"Error: Transcript for video {video_id} is too short ({len(cleaned_text)} chars)")
         return None
 
     # Create the folder for this video's index
@@ -78,18 +78,18 @@ def add_to_vector_db(video_id: str, text: str):
 
     # Split text into chunks - INCREASED CHUNK SIZE FOR BETTER CONTEXT
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,  # Increased from 500
-        chunk_overlap=200,  # Increased from 50
+        chunk_size=1000, 
+        chunk_overlap=100,
         separators=["\n\n", "\n", ". ", " ", ""]
     )
 
     # Create documents with metadata
     chunks = text_splitter.split_text(cleaned_text)
-    print(f"Split transcript into {len(chunks)} chunks for vector storage")
+    logging.info(f"Split transcript into {len(chunks)} chunks for vector storage")
 
     # Ensure we have chunks to work with
     if not chunks:
-        print(f"Error: No chunks were created from transcript for video {video_id}")
+        logging.error(f"Error: No chunks were created from transcript for video {video_id}")
         return None
 
     # Store original text in metadata for debugging
@@ -100,7 +100,7 @@ def add_to_vector_db(video_id: str, text: str):
                 "video_id": video_id,
                 "chunk_id": i,
                 "source": "transcript",
-                "chunk_length": len(chunk)  # Add length metadata for debugging
+                "chunk_length": len(chunk)
             }
         )
         for i, chunk in enumerate(chunks)
@@ -115,10 +115,10 @@ def add_to_vector_db(video_id: str, text: str):
                 "total_length": len(cleaned_text)
             }, f)
     except Exception as e:
-        print(f"Warning: Could not save chunks metadata: {e}")
+        logging.warning(f"Warning: Could not save chunks metadata: {e}")
 
     # Initialize embeddings
-    embeddings = get_embedding_model()
+    embeddings = initalize_embedding_model()
 
     try:
         # Create vector store
@@ -127,7 +127,7 @@ def add_to_vector_db(video_id: str, text: str):
         # Test the vector store with a simple query to ensure it works
         test_results = vector_store.similarity_search("test query", k=1)
         if not test_results:
-            print("Warning: Vector store created but test query returned no results")
+            logging.warning("Warning: Vector store created but test query returned no results")
 
         # Save the vector store
         index_path = video_dir / "index"
@@ -136,12 +136,12 @@ def add_to_vector_db(video_id: str, text: str):
         # Add to global registry
         _VIDEO_VECTOR_STORES[video_id] = vector_store
 
-        print(f"Successfully added {len(documents)} chunks to vector store for video {video_id}")
+        logging.info(f"Successfully added {len(documents)} chunks to vector store for video {video_id}")
         return vector_store
     except Exception as e:
-        print(f"Error creating vector store for video {video_id}: {e}")
-        import traceback
-        print(traceback.format_exc())
+        logging.error(f"Error creating vector store for video {video_id}: {e}")
+        
+        logging.error(traceback.format_exc())
         return None
 
 def search_similar_videos(query: str, limit: int = 5) -> List[str]:
@@ -159,7 +159,7 @@ def search_similar_videos(query: str, limit: int = 5) -> List[str]:
         return []
 
     # Initialize embeddings
-    embeddings = get_embedding_model()
+    embeddings = initalize_embedding_model()
 
     # Convert query to embedding
     query_embedding = embeddings.embed_query(query)
@@ -171,7 +171,7 @@ def search_similar_videos(query: str, limit: int = 5) -> List[str]:
             # Search in this vector store
             similar_docs = vector_store.similarity_search_by_vector(
                 query_embedding,
-                k=2  # Get top 2 chunks from each video
+                k=3  # Get top 2 chunks from each video
             )
 
             if similar_docs:
@@ -183,7 +183,7 @@ def search_similar_videos(query: str, limit: int = 5) -> List[str]:
                     "matching_chunks": len(similar_docs)
                 })
         except Exception as e:
-            print(f"Error searching vector store for video {video_id}: {e}")
+            logging.error(f"Error searching vector store for video {video_id}: {e}")
 
     # Sort by relevance and return video IDs
     results.sort(key=lambda x: (x["matching_chunks"], x["similarity"]), reverse=True)

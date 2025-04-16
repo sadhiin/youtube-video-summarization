@@ -103,7 +103,7 @@ async def summarize_video(
         # Get basic video info first
         config = YouTubeDownloadConfig(url=request.url, media_type=MediaType.AUDIO)
         downloader = YouTubeDownloader(config)
-        logging.info(f"Downloading video with config: {config}")
+        # logging.info(f"Downloading video with config: {config}")
         media_info = downloader.get_media_info()
 
         # Start background processing

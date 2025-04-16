@@ -41,10 +41,10 @@ class Transcript(Base):
     text = Column(Text, nullable=False)
     file_path = Column(String(255), nullable=True)
     model = Column(String(50), nullable=True)
-    segments = Column(JSON, nullable=True)  # For storing transcript segments with timestamps
+    segments = Column(JSON, nullable=True)
     language = Column(String(10), nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
+    updated_at = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc), onupdate=datetime.datetime.now(datetime.timezone.utc))
 
     # Relationships
     video = relationship("Video", back_populates="transcript")
@@ -61,8 +61,8 @@ class Summary(Base):
     video_id = Column(String(20), ForeignKey("videos.id", ondelete="CASCADE"), unique=True)
     text = Column(Text, nullable=False)
     model = Column(String(50), nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
+    updated_at = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc), onupdate=datetime.datetime.now(datetime.timezone.utc))
 
     # Relationships
     video = relationship("Video", back_populates="summary")
@@ -80,7 +80,7 @@ class ChatHistory(Base):
     session_id = Column(String(50), nullable=False)  # To group messages by user session
     message = Column(Text, nullable=False)
     response = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
 
     # Relationships
     video = relationship("Video", back_populates="chat_history")

@@ -19,9 +19,10 @@ class Config:
     APP_NAME = "YouTube Video Summarizer"
     APP_VERSION = "0.1.1"
 
-    # Data directories
-    BASE_DIR = Path(__file__).resolve().parent.parent.absolute()
-    DATA_DIR = BASE_DIR / "data"
+    ## Data directories
+    # BASE_DIR = Path(__file__).resolve().parent.parent.absolute()
+    # DATA_DIR = BASE_DIR / "data"
+    DATA_DIR = Path("data")
     DOWNLOADS_DIR = DATA_DIR / "downloads"
     TRANSCRIPTS_DIR = DATA_DIR / "transcripts"
     SUMMARIES_DIR = DATA_DIR / "summaries"
@@ -55,8 +56,9 @@ class Config:
     @classmethod
     def get_paths(cls) -> Dict[str, Path]:
         """Get all application paths."""
+        
         return {
-            "base_dir": cls.BASE_DIR,
+            # "base_dir": cls.BASE_DIR,
             "data_dir": cls.DATA_DIR,
             "downloads_dir": cls.DOWNLOADS_DIR,
             "transcripts_dir": cls.TRANSCRIPTS_DIR,
@@ -93,4 +95,4 @@ def get_config():
 
 # Create a config instance
 config = get_config()
-config.initialize()
+config.initialize()     # just to ensure all the directories are created

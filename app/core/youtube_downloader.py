@@ -26,13 +26,17 @@ class YouTubeDownloader:
         """
         self.config = config
         self.yt = YouTube(config.url, on_progress_callback=on_progress)
+        # self.yt = YouTube(config.url, on_progress_callback=on_progress, use_po_token=True, client='WEB')
+
+
 
     def get_media_info(self) -> YouTubeMedia:
         """Extract metadata from YouTube video."""
         return YouTubeMedia(
             video_id=self.yt.video_id,
             title=self.yt.title,
-            author=self.yt.author
+            author=self.yt.author,
+            url=self.yt.watch_url,
         )
 
     def _get_filename(self, extension: str) -> str:

@@ -1,11 +1,13 @@
+# -*- coding: utf-8 -*-
 """
 Module to get embedding models for vector operations.
 """
 
 import os
 from app.config import config
+from app.utils.logger import logging
 
-def get_embedding_model():
+def initalize_embedding_model():
     """
     Get the embedding model for vector operations.
 
@@ -24,11 +26,11 @@ def get_embedding_model():
                 api_key=nvidia_api_key,
                 truncate="NONE")
 
-            print("Using NVIDIA embeddings model")
+            logging.info("Using NVIDIA embeddings model")
             return embedding_model
         except Exception as e:
-            print(f"Error loading NVIDIA embeddings: {e}")
-            print("Falling back to HuggingFace embeddings")
+            logging.error(f"Error loading NVIDIA embeddings: {e}")
+            logging.warning("Falling back to HuggingFace embeddings")
 
     # Fallback to HuggingFace embeddings
     try:
@@ -37,10 +39,11 @@ def get_embedding_model():
         model_name = "sentence-transformers/all-MiniLM-L6-v2"
         embedding_model = HuggingFaceEmbeddings(model_name=model_name)
 
-        print(f"Using HuggingFace embeddings model: {model_name}")
+        logging.info(f"Using HuggingFace embeddings model: {model_name}")
         return embedding_model
     except Exception as e:
-        print(f"Error loading HuggingFace embeddings: {e}")
+        logging.error(f"Error loading HuggingFace embeddings: {e}")
+        logging.error("Falling back to 'Fake' embedding model")
 
         # Ultimate fallback - fake embeddings that return zeros
         # This is just to prevent hard crashes if no embedding model works
@@ -53,5 +56,5 @@ def get_embedding_model():
             def embed_query(self, text):
                 return [0.0] * 384
 
-        print("WARNING: Using fallback embeddings (zeros) - chat functionality may not work properly")
+        logging.warning("WARNING: Using fallback embeddings (zeros) - chat functionality may not work properly")
         return FallbackEmbeddings()

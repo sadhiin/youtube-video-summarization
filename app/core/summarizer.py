@@ -10,7 +10,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chat_models import init_chat_model
 
-from app.models.schemas import YouTubeMedia, SummaryConfig, VideoSummary
+from app.models.schemas import YouTubeMedia, SummaryConfig, VideoSummary, TranscriptedData
 
 
 class TranscriptSummarizer:
@@ -119,22 +119,25 @@ class TranscriptSummarizer:
             final_summary = reduce_chain.invoke({"summaries": "\n\n".join(interim_summaries)})
             return final_summary.content
 
-    def create_summary(self, media: YouTubeMedia, transcript_text: str, config: SummaryConfig) -> VideoSummary:
+    def create_summary(self, media: YouTubeMedia, transcript_data:TranscriptedData , config: SummaryConfig) -> VideoSummary:
         """
         Create a full video summary.
 
         Args:
             media: YouTubeMedia object
-            transcript_text: Full transcript text
+            transcript_data : TranscriptedData object with transcript text and segments
             config: Configuration for summarization
 
         Returns:
             VideoSummary object
         """
-        summary = self.summarize(transcript_text, config)
+        summary = self.summarize(transcript_data.transcript_text, config)
 
         return VideoSummary(
             media_info=media,
             summary=summary,
-            transcript_text=transcript_text
+            transcript_text=transcript_data.transcript_text,
+            transcript_segments=transcript_data.segments,
+            language=transcript_data.language,
+            model=transcript_data.model
         )
