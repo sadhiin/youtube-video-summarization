@@ -120,7 +120,8 @@ class AudioTranscriber:
         # Extract segments based on response format
         if isinstance(data, dict):
             # For verbose_json format
-            if "text" in transcript_data:
+            logging.debug("Extracting segments from verbose_json format")
+            if "text" in data:
                 transcript_data.transcript_text = data["text"]
             if "segments" in data:
                 transcript_data.segments = data["segments"]
