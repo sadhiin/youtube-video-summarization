@@ -16,6 +16,14 @@ A Python application that downloads YouTube videos, transcribes them using Groq'
 - **Caching** (Redis or in-memory) for performance optimization
 - Command-line interface for easy use
 
+---
+
+| ![image-1](images/img_1.png) | ![image-2](images/img_2.png) |
+|------------------------------|------------------------------|
+| ![image-3](images/img_3.png) | ![image-4](images/img_4.png) |
+
+---
+
 ## Installation
 
 ### Prerequisites
