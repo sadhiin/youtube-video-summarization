@@ -4,6 +4,7 @@ Chat handler module for interacting with video transcripts using Langchain.
 """
 
 import os
+import traceback
 import uuid
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
@@ -160,7 +161,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
     embeddings = initalize_embedding_model()
     embeddings_filter = EmbeddingsFilter(
         embeddings=embeddings,
-        similarity_threshold=0.65  # Slightly lower threshold to get more results
+        similarity_threshold=0.5
     )
 
     retriever = ContextualCompressionRetriever(
@@ -236,7 +237,7 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
 
     # logging.info debug info
     transcript_length = len(stored_summary.get("transcript_text", ""))
-    logging.info(f"Found transcript for video {video_id} with length: {transcript_length}")
+    logging.info(f"Found transcript for video {video_id} with transcription text length: {transcript_length}")
 
     try:
         # Create chain
@@ -246,8 +247,11 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
         vector_store = get_vector_store_for_video(video_id)
         if vector_store:
             test_docs = vector_store.similarity_search(message, k=3)
-            logging.info(f"Direct search found {len(test_docs)} relevant chunks")
-            logging.info(f"Sample chunk: {test_docs[0].page_content[:100] if test_docs else 'None'}")
+            if not test_docs:
+                logging.warning("Vector store has no relevant chunks for test query!")
+            else:
+                logging.info(f"Direct search found {len(test_docs)} relevant chunks")
+                logging.info(f"Sample chunk: {test_docs[0].page_content[:100] if test_docs else 'None'}")
 
         # Get response
         logging.info(f"Processing question: {message}")
@@ -256,11 +260,40 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
             "chat_history": session.memory.chat_memory.messages
         })
 
-        # Check if we got content from the context
+       
         if "source_documents" in response and response["source_documents"]:
             logging.info(f"Retrieved {len(response['source_documents'])} source documents")
         else:
-            logging.info("WARNING: No source documents were retrieved!")
+            llm = init_chat_model(
+                model=config.DEFAULT_SUMMARY_MODEL,
+                model_provider="groq",
+                temperature=0.3
+            )
+
+            logging.warning("WARNING: No source documents were retrieved!")
+            # Fallback to direct transcript usage
+            transcript_excerpt = stored_summary["transcript_text"]
+            direct_prompt = ChatPromptTemplate.from_messages([
+                ("system", f"Answer based on this transcript start: {transcript_excerpt}..."),
+                ("human", "{question}")
+            ])
+            response = direct_prompt | llm
+            answer = response.invoke({"question": message}).content
+            session.save_interaction(db, message, answer)
+            # Format sources
+            sources = []
+            if "source_documents" in response:
+                for doc in response["source_documents"]:
+                    sources.append({
+                        "content": doc.page_content,
+                        "metadata": doc.metadata
+                    })
+
+            return {
+                "answer": answer,
+                'sources': [],
+                "session_id": session.session_id
+            }
 
         # Save interaction to database
         session.save_interaction(db, message, response["answer"])
@@ -281,7 +314,7 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
         }
     except ValueError as e:
         # Handle the case where no vector store is available
-        logging.info(f"Error in chat response: {e.__str__()}")
+        logging.error(f"Error in chat response: {e.__str__()}")
 
         # Try direct approach using the complete transcript
         try:
@@ -292,14 +325,12 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
             )
 
             transcript_text = stored_summary["transcript_text"]
-            # Only use first 3000 chars to avoid context length issues
-            transcript_excerpt = transcript_text[:3000]
 
             direct_prompt = ChatPromptTemplate.from_messages([
                 ("system", f"""You are an AI assistant that helps users understand YouTube video content.
                 Here's a part of the video transcript (the beginning of the video):
 
-                {transcript_excerpt}
+                {transcript_text}
 
                 Answer the user's question based on this excerpt. If you can't answer from this excerpt,
                 say that you have limited information from the transcript."""),
@@ -317,16 +348,15 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
                 "session_id": session.session_id
             }
         except Exception as direct_error:
-            logging.info(f"Direct approach also failed: {direct_error}")
+            logging.error(f"Direct approach also failed: {direct_error}")
             return {
                 "answer": "I'm having trouble processing the transcript. Please try again or summarize the video again.",
                 "sources": [],
                 "session_id": session.session_id
             }
     except Exception as e:
-        logging.info(f"Unexpected error in chat_handler: {str(e)}")
-        import traceback
-        logging.info(traceback.format_exc())
+        logging.error(f"Unexpected error in chat_handler: {str(e)}")
+        logging.error(traceback.format_exc())
 
         return {
             "answer": "I encountered an unexpected error while processing your question. Please try again later.",
