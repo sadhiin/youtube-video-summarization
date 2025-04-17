@@ -16,31 +16,16 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.chat_models import init_chat_model
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import EmbeddingsFilter
-# from langchain_community.vectorstores import FAISS
-# from langchain.docstore.document import Document
+
 
 from app.config import config
 from app.db.crud import add_chat_message, get_chat_history, get_stored_summary
 from app.db.models import Video, Transcript
 from app.utils.vector_store import get_vector_store_for_video
+from app.utils.vector_store_manager import VectorStoreManager
 from app.embeddings.get_embedding_model import initalize_embedding_model
 from app.utils.logger import logging
-
-# Chat system prompt
-CHAT_SYSTEM_PROMPT = """
-You are an AI assistant that helps users understand YouTube video content.
-You have access to the transcript of the video they're asking about.
-
-Answer the user's question based on the transcript provided.
-Be concise and accurate. If the transcript doesn't contain the information
-to answer the question, just say so instead of making up information.
-
-Transcript context:
-{context}
-
-Chat history:
-{chat_history}
-"""
+from app.config import ChatConfig
 
 
 class ChatSession:
@@ -161,7 +146,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
     embeddings = initalize_embedding_model()
     embeddings_filter = EmbeddingsFilter(
         embeddings=embeddings,
-        similarity_threshold=0.5
+        similarity_threshold=0.2
     )
 
     retriever = ContextualCompressionRetriever(
@@ -257,7 +242,6 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
         logging.info(f"Processing question: {message}")
         response = chain.invoke({
             "question": message,
-            "chat_history": session.memory.chat_memory.messages
         })
 
        
