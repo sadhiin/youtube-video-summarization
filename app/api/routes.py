@@ -27,7 +27,7 @@ from app.db.crud import get_stored_summary, store_summary, video_exists
 from app.db.database import get_db, DBSession
 from app.utils.vector_store import add_to_vector_db, search_similar_videos
 from app.utils.logger import logging
-
+from app.utils.vector_store_manager import VectorStoreManager
 # Create API router
 router = APIRouter(prefix="/api/v1", tags=["youtube"])
 
@@ -138,10 +138,12 @@ async def chat_with_video(
         )
 
     # This will be implemented in the chat handler module
-    from app.core.chat_handler import get_chat_response
-    from app.core.chat_handler import ChatSession
+    from app.core.chat_handler import get_chat_response, ChatSession
     try:
-        session = ChatSession(chat_request.video_id, None)
+        session = ChatSession(
+            video_id=chat_request.video_id,
+            session_id=None,
+        )
         response = get_chat_response(
             video_id=chat_request.video_id,
             message=chat_request.message,

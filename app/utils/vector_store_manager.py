@@ -17,27 +17,64 @@ class VectorStoreManager:
            delay=ChatConfig.VECTOR_STORE_RETRY_DELAY,
            backoff=ChatConfig.VECTOR_STORE_BACKOFF,
            logger=logging)
+    # def get_or_create_store(self, transcript: str) -> FAISS:
+    #     """Get or create vector store with fallback mechanisms."""
+    #     from app.utils.vector_store import get_vector_store_for_video
+        
+    #     # Try existing store first
+    #     if store := get_vector_store_for_video(self.video_id):
+    #         return store
+            
+    #     # Create new store with proper chunking
+    #     splitter = RecursiveCharacterTextSplitter(
+    #         chunk_size=self.config.CHUNK_SIZE,
+    #         chunk_overlap=self.config.CHUNK_OVERLAP
+    #     )
+        
+    #     try:
+    #         docs = self._create_documents(transcript, splitter)
+    #         return FAISS.from_documents(docs, self._get_embeddings())
+    #     except Exception as e:
+    #         logging.error(f"Vector store creation failed: {str(e)}")
+    #         return self._create_emergency_store(transcript)
+
+    # Update the get_or_create_store method to be more robust
     def get_or_create_store(self, transcript: str) -> FAISS:
         """Get or create vector store with fallback mechanisms."""
         from app.utils.vector_store import get_vector_store_for_video
         
         # Try existing store first
         if store := get_vector_store_for_video(self.video_id):
+            logging.info(f"Using existing vector store for video {self.video_id}")
             return store
             
-        # Create new store with proper chunking
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.config.CHUNK_SIZE,
-            chunk_overlap=self.config.CHUNK_OVERLAP
-        )
+        logging.info(f"Creating new vector store for video {self.video_id} with transcript length {len(transcript)}")
         
+        # Create documents with consistent chunking
         try:
-            docs = self._create_documents(transcript, splitter)
-            return FAISS.from_documents(docs, self._get_embeddings())
+            embeddings = self._get_embeddings()
+            splitter = RecursiveCharacterTextSplitter(
+                chunk_size=self.config.CHUNK_SIZE,
+                chunk_overlap=self.config.CHUNK_OVERLAP
+            )
+            
+            # Split text and create documents
+            chunks = splitter.split_text(transcript)
+            if not chunks:
+                raise ValueError("No chunks created from transcript")
+                
+            docs = self._create_documents(chunks)
+            
+            # Create and verify the vector store
+            store = FAISS.from_documents(docs, embeddings)
+            if not self._verify_store(store, "test query"):
+                raise ValueError("Vector store verification failed")
+                
+            return store
         except Exception as e:
             logging.error(f"Vector store creation failed: {str(e)}")
             return self._create_emergency_store(transcript)
-
+    
     def _create_documents(self, transcript: str, splitter: RecursiveCharacterTextSplitter) -> list[Document]:
         """Create documents with proper metadata."""
         return [

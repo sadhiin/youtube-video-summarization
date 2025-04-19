@@ -15,7 +15,7 @@ from langchain.chat_models import init_chat_model
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import EmbeddingsFilter
 
-
+import json
 from app.config import config, ChatConfig
 from app.db.crud import add_chat_message, get_chat_history, get_stored_summary
 from app.db.models import Video, Transcript
@@ -149,7 +149,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
         model_provider="groq",
         temperature=0.3
     )
-
+    stored_summary=None
     # Get vector store for this video
     vector_store = get_vector_store_for_video(video_id)
     logging.info(f"Checking vector store for video {video_id}: {'Found' if vector_store else 'Not found'}")
@@ -238,11 +238,14 @@ def create_chat_chain(video_id: str, session: ChatSession):
         retriever=retriever,
         memory=session.memory,
         return_source_documents=True,
-        verbose=True,  # Enable verbose mode for debugging
+        verbose=True,
         combine_docs_chain_kwargs={
             "prompt": prompt,
             "document_variable_name": "context"
-        }
+        },
+        # memory_key="chat_history",
+        # input_key="question",
+        # output_key="answer"
     )
     
     # TODO: Need to validate the chain and retriever chain creation.
@@ -254,7 +257,18 @@ def get_chat_response(video_id: str, message: str, db: Session, session:ChatSess
     """
     Get a chat response for a question about a video.
     """
+    # Add input validation
+    if not message or not message.strip():
+        return {
+            "answer": "Please provide a question about the video.",
+            "sources": [],
+            "session_id": session.session_id
+        }
+    
+    
     session.load_history_from_db(db)
+    history_count = len(session.memory.chat_memory.messages)
+    logging.info(f"Loaded {history_count} messages from chat history")
 
     # First check if the transcript exists in the database
     stored_summary = get_stored_summary(db, video_id)
@@ -273,10 +287,17 @@ def get_chat_response(video_id: str, message: str, db: Session, session:ChatSess
             "sources": [],
             "session_id": session.session_id
         }
+    # Throughout the function, add diagnostic info
+    diagnostics = {}
+    diagnostics["history_length"] = len(session.memory.chat_memory.messages)
+    diagnostics["transcript_length"] = len(stored_summary.get("transcript_text", ""))
+    # Before returning a successful response
+    if config.DEBUG:
+        logging.info(f"Chat diagnostics: {json.dumps(diagnostics)}")
 
     transcript_length = len(stored_summary.get("transcript_text", ""))
     logging.info(f"Found transcript for video {video_id} with transcription text length: {transcript_length}")
-
+    
     try:
         # Create chain
         chain = create_chat_chain(video_id, session)
@@ -295,6 +316,7 @@ def get_chat_response(video_id: str, message: str, db: Session, session:ChatSess
         logging.info(f"Processing question: {message}")
         response = chain.invoke({
             "question": message,
+            "chat_history": session.memory.chat_memory.messages
         })
 
        
