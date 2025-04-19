@@ -139,12 +139,14 @@ async def chat_with_video(
 
     # This will be implemented in the chat handler module
     from app.core.chat_handler import get_chat_response
-
+    from app.core.chat_handler import ChatSession
     try:
+        session = ChatSession(chat_request.video_id, None)
         response = get_chat_response(
             video_id=chat_request.video_id,
             message=chat_request.message,
-            db=db
+            db=db,
+            session=session
         )
         return response
     except Exception as e:
@@ -234,7 +236,7 @@ async def process_video_in_background(url: str, model: str, num_lines: int = 5, 
 
         # Add to vector database for searching
         if summary.transcript_text:
-            from app.utils.vector_store import add_to_vector_db, get_vector_store_for_video
+            from app.utils.vector_store import add_to_vector_db
 
             vector_store = add_to_vector_db(
                 video_id=summary.media_info.video_id,

@@ -5,29 +5,26 @@ Chat handler module for interacting with video transcripts using Langchain.
 
 import os
 import traceback
-import uuid
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
-
+import uuid
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chat_models import init_chat_model
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import EmbeddingsFilter
 
 
-from app.config import config
+from app.config import config, ChatConfig
 from app.db.crud import add_chat_message, get_chat_history, get_stored_summary
 from app.db.models import Video, Transcript
 from app.utils.vector_store import get_vector_store_for_video
 from app.utils.vector_store_manager import VectorStoreManager
 from app.embeddings.get_embedding_model import initalize_embedding_model
 from app.utils.logger import logging
-from app.config import ChatConfig
-
-
+from app.core.prompts import system_template
+from langchain.memory import ConversationBufferMemory
 class ChatSession:
     """Chat session with memory."""
 
@@ -63,6 +60,7 @@ class ChatSession:
         # Also update memory
         self.memory.chat_memory.add_user_message(question)
         self.memory.chat_memory.add_ai_message(answer)
+
 
 # from typing import Optional
 # from uuid import uuid4
@@ -126,7 +124,7 @@ class ChatSession:
 #         config = {"configurable": {"thread_id": self.session_id}}
 #         return self.checkpointer.get(config)["messages"]
 
-# Database integration remains similar but uses checkpointer state
+#     ## Database integration remains similar but uses checkpointer state
 # def load_history(db: Session, session: ChatSession):
 #     """Sync database history with LangGraph checkpointer"""
 #     db_history = get_chat_history(db, session.video_id, session.session_id)
@@ -205,12 +203,6 @@ def create_chat_chain(video_id: str, session: ChatSession):
     if not vector_store:
         raise ValueError("Failed to create vector store for this video")
 
-    # Test retriever functionality
-    test_retrieval = vector_store.similarity_search("test", k=1)
-    logging.info(f"Test retrieval returned {len(test_retrieval)} documents")
-    if test_retrieval:
-        logging.info(f"Sample content length: {len(test_retrieval[0].page_content)}")
-
     # Create retriever with better search parameters
     base_retriever = vector_store.as_retriever(
         search_type="similarity",
@@ -222,6 +214,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
 
     # Create contextual compression for better filtering
     embeddings = initalize_embedding_model()
+
     embeddings_filter = EmbeddingsFilter(
         embeddings=embeddings,
         similarity_threshold=0.2
@@ -233,29 +226,12 @@ def create_chat_chain(video_id: str, session: ChatSession):
     )
 
     # Create improved system prompt template
-    system_template = """
-    You are an AI assistant that helps users understand YouTube video content.
-    You have access to the transcript of the video they're asking about.
-
-    Below is the relevant context from the video transcript:
-
-    {context}
-
-    Previous conversation history:
-    {chat_history}
-
-    Based ONLY on the information provided in the transcript context above,
-    answer the user's question thoroughly and accurately.
-
-    If the transcript doesn't contain information to answer the question,
-    be honest and say you don't have that information from the video.
-    """
-
+    
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_template),
         ("human", "{question}")
     ])
-
+    logging.info(f"*********** Calling the ConversationalRetrievalChain with video_id: {video_id} ***********")
     # Create conversational chain with explicit parameters
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
@@ -274,11 +250,10 @@ def create_chat_chain(video_id: str, session: ChatSession):
     return chain
 
 
-def get_chat_response(video_id: str, message: str, db: Session, session_id: Optional[str] = None) -> Dict[str, Any]:
+def get_chat_response(video_id: str, message: str, db: Session, session:ChatSession) -> Dict[str, Any]:
     """
     Get a chat response for a question about a video.
     """
-    session = ChatSession(video_id, session_id)
     session.load_history_from_db(db)
 
     # First check if the transcript exists in the database
@@ -289,6 +264,7 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
             "sources": [],
             "session_id": session.session_id
         }
+    
     assert stored_summary.get("transcript_text") is not None, "Transcript text should not be None"
     
     if not stored_summary.get("transcript_text"):
@@ -298,7 +274,6 @@ def get_chat_response(video_id: str, message: str, db: Session, session_id: Opti
             "session_id": session.session_id
         }
 
-    # logging.info debug info
     transcript_length = len(stored_summary.get("transcript_text", ""))
     logging.info(f"Found transcript for video {video_id} with transcription text length: {transcript_length}")
 
