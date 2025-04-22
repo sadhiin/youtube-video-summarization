@@ -20,26 +20,28 @@ class Config:
     APP_VERSION = "0.1.1"
 
     ## Data directories
-    # BASE_DIR = Path(__file__).resolve().parent.parent.absolute()
-    # DATA_DIR = BASE_DIR / "data"
+
     DATA_DIR = Path("data")
     DOWNLOADS_DIR = DATA_DIR / "downloads"
     TRANSCRIPTS_DIR = DATA_DIR / "transcripts"
     SUMMARIES_DIR = DATA_DIR / "summaries"
-
+    REDIS_URL = os.getenv("REDIS_URL", None)
     # API keys
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
     # Default models
     DEFAULT_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
     DEFAULT_SUMMARY_MODEL = "llama-3.3-70b-versatile"
-    VECTOR_EMBEDDING_MODEL = os.getenv("VECTOR_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    VECTOR_EMBEDDING_MODEL = os.getenv(
+        "VECTOR_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+    )
     os.environ["NVIDIA_API_KEY"] = os.getenv("NVIDIA_API_KEY")
 
     # os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
     # os.environ["LANGSMITH_TRACING"] = os.getenv("LANGSMITH_TRACING", "true")
     # os.environ["LANGSMITH_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "YouTube Summarizer Project")
     PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000")
+
     # Create data directories if they don't exist
     @classmethod
     def initialize(cls):
@@ -56,25 +58,27 @@ class Config:
     @classmethod
     def get_paths(cls) -> Dict[str, Path]:
         """Get all application paths."""
-        
+
         return {
             # "base_dir": cls.BASE_DIR,
             "data_dir": cls.DATA_DIR,
             "downloads_dir": cls.DOWNLOADS_DIR,
             "transcripts_dir": cls.TRANSCRIPTS_DIR,
-            "summaries_dir": cls.SUMMARIES_DIR
+            "summaries_dir": cls.SUMMARIES_DIR,
         }
+
 
 class ChatConfig(Config):
     """Configuration for chat-related components."""
+
     # Text chunking parameters
     CHUNK_SIZE = 1000
     CHUNK_OVERLAP = 100
-    
+
     # Vector store settings
     EMERGENCY_CHUNK_LIMIT = 9000
     SIMILARITY_THRESHOLD = 0.2
-    
+
     # Retry configuration
     VECTOR_STORE_RETRIES = 3
     VECTOR_STORE_RETRY_DELAY = 1
@@ -159,9 +163,13 @@ class ProductionConfig(Config):
 def get_config():
     """Get the appropriate configuration based on environment."""
     env = os.getenv("ENVIRONMENT", "development").lower()
-    os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY", "your_langsmith_api_key")
+    os.environ["LANGSMITH_API_KEY"] = os.getenv(
+        "LANGSMITH_API_KEY", "your_langsmith_api_key"
+    )
     os.environ["LANGSMITH_TRACING"] = os.getenv("LANGSMITH_TRACING", "true")
-    os.environ["LANGSMITH_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "YouTube Summarizer Project")
+    os.environ["LANGSMITH_PROJECT"] = os.getenv(
+        "LANGSMITH_PROJECT", "YouTube Summarizer Project"
+    )
     if env == "production":
         return ProductionConfig
     else:
