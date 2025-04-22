@@ -63,88 +63,10 @@ class ChatSession:
         self.memory.chat_memory.add_ai_message(answer)
 
 
-# from typing import Optional
-# from uuid import uuid4
-# from sqlalchemy.orm import Session
-# from langchain_core.messages import HumanMessage, AIMessage
-# from langgraph.checkpoint.memory import MemorySaver
-# from langgraph.graph import StateGraph, MessagesState
-
-# class ChatSession:
-#     """Modern chat session using LangGraph memory management."""
-    
-#     def __init__(
-#         self,
-#         video_id: str,
-#         session_id: Optional[str] = None,
-#         window_size: int = 5
-#     ):
-#         self.video_id = video_id
-#         self.session_id = session_id or str(uuid4())
-#         self.checkpointer = MemorySaver()
-#         self.workflow = self._create_workflow(window_size)
-
-#     def _create_workflow(self, window_size: int) -> StateGraph:
-#         """Configure LangGraph workflow with memory trimming."""
-#         workflow = StateGraph(state_schema=MessagesState)
-
-#         # Define model invocation with context window management
-#         def model_invoke(state: MessagesState):
-#             from langchain_core.messages import trim_messages
-        
-#             trimmed = trim_messages(
-#                 state.messages,
-#                 max_tokens=window_size,
-#                 token_counter=lambda m: 1  # Count each message as 1 "token"
-#             )
-#             return {"messages": trimmed}
-
-#         workflow.add_node("model", model_invoke)
-#         workflow.set_entry_point("model")
-#         return workflow.compile(checkpointer=self.checkpointer)
-
-#     def process_message(self, user_input: str) -> str:
-#         """Process user message with persistent memory."""
-#         config = {"configurable": {"thread_id": self.session_id}}
-        
-#         # Invoke workflow with message history
-#         result = self.workflow.invoke(
-#             {"messages": [HumanMessage(content=user_input)]},
-#             config=config
-#         )
-        
-#         # Extract and return AI response
-#         return next(
-#             msg.content 
-#             for msg in result["messages"] 
-#             if isinstance(msg, AIMessage)
-#         )
-
-#     def get_history(self) -> list:
-#         """Retrieve conversation history from checkpointer."""
-#         config = {"configurable": {"thread_id": self.session_id}}
-#         return self.checkpointer.get(config)["messages"]
-
-#     ## Database integration remains similar but uses checkpointer state
-# def load_history(db: Session, session: ChatSession):
-#     """Sync database history with LangGraph checkpointer"""
-#     db_history = get_chat_history(db, session.video_id, session.session_id)
-#     messages = [
-#         HumanMessage(content=entry.message) if entry.is_user 
-#         else AIMessage(content=entry.response)
-#         for entry in db_history
-#     ]
-    
-#     # Initialize checkpointer state
-#     session.checkpointer.put(
-#         {"configurable": {"thread_id": session.session_id}},
-#         {"messages": messages}
-#     )
-
 
 def create_chat_chain(video_id: str, session: ChatSession):
     """Create a chatbot chain with chat memory for a video."""
-    # Initialize LLM
+
     llm = init_chat_model(
         model=config.DEFAULT_SUMMARY_MODEL,
         model_provider="groq",
@@ -159,7 +81,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
     if not vector_store:
         from app.db.database import get_db
         db = next(get_db())
-        stored_summary = get_stored_summary(db, video_id)   # this will return the summary and transcript and video info
+        stored_summary = get_stored_summary(db, video_id)
 
         if not stored_summary or not stored_summary.get("transcript_text"):
             raise ValueError(f"No transcript available for video {video_id}")
