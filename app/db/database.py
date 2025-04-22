@@ -31,9 +31,7 @@ DBSession = Session
 
 def init_db() -> None:
     """Initialize the database by creating all tables."""
-    # Import all models here to ensure they're registered with Base
-    from app.db.models import Video, Transcript, Summary, ChatHistory
-
+    
     # Create all tables
     Base.metadata.create_all(bind=engine)
 
