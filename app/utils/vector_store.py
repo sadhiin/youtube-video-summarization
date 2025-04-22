@@ -165,7 +165,7 @@ def search_similar_videos(query: str, limit: int = 5) -> List[str]:
             # Search in this vector store
             similar_docs = vector_store.similarity_search_by_vector(
                 query_embedding,
-                k=3  # Get top 2 chunks from each video
+                k=3  # Get top 3 chunks from each video
             )
 
             if similar_docs:
