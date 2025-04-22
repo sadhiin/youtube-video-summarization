@@ -1,10 +1,12 @@
+from retry import retry
 from typing import Optional
 from langchain_community.vectorstores import FAISS
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+from app.embeddings.get_embedding_model import initalize_embedding_model
 from app.config import ChatConfig
 from app.utils.logger import logging
-from retry import retry
 
 class VectorStoreManager:
     """Manages creation and retrieval of vector stores with retry logic."""
@@ -17,58 +19,29 @@ class VectorStoreManager:
            delay=ChatConfig.VECTOR_STORE_RETRY_DELAY,
            backoff=ChatConfig.VECTOR_STORE_BACKOFF,
            logger=logging)
-    # def get_or_create_store(self, transcript: str) -> FAISS:
-    #     """Get or create vector store with fallback mechanisms."""
-    #     from app.utils.vector_store import get_vector_store_for_video
-        
-    #     # Try existing store first
-    #     if store := get_vector_store_for_video(self.video_id):
-    #         return store
-            
-    #     # Create new store with proper chunking
-    #     splitter = RecursiveCharacterTextSplitter(
-    #         chunk_size=self.config.CHUNK_SIZE,
-    #         chunk_overlap=self.config.CHUNK_OVERLAP
-    #     )
-        
-    #     try:
-    #         docs = self._create_documents(transcript, splitter)
-    #         return FAISS.from_documents(docs, self._get_embeddings())
-    #     except Exception as e:
-    #         logging.error(f"Vector store creation failed: {str(e)}")
-    #         return self._create_emergency_store(transcript)
-
-    # Update the get_or_create_store method to be more robust
+    
     def get_or_create_store(self, transcript: str) -> FAISS:
         """Get or create vector store with fallback mechanisms."""
         from app.utils.vector_store import get_vector_store_for_video
         
-        # Try existing store first
         if store := get_vector_store_for_video(self.video_id):
             logging.info(f"Using existing vector store for video {self.video_id}")
             return store
             
         logging.info(f"Creating new vector store for video {self.video_id} with transcript length {len(transcript)}")
         
-        # Create documents with consistent chunking
         try:
             embeddings = self._get_embeddings()
+            assert embeddings is not None, "Embeddings model is not initialized or getting None."
+            
             splitter = RecursiveCharacterTextSplitter(
                 chunk_size=self.config.CHUNK_SIZE,
                 chunk_overlap=self.config.CHUNK_OVERLAP
             )
+                          
+            docs = self._create_documents(transcript, splitter)
             
-            # Split text and create documents
-            chunks = splitter.split_text(transcript)
-            if not chunks:
-                raise ValueError("No chunks created from transcript")
-                
-            docs = self._create_documents(chunks)
-            
-            # Create and verify the vector store
             store = FAISS.from_documents(docs, embeddings)
-            if not self._verify_store(store, "test query"):
-                raise ValueError("Vector store verification failed")
                 
             return store
         except Exception as e:
@@ -101,6 +74,9 @@ class VectorStoreManager:
         )
 
     def _get_embeddings(self):
-        """Initialize embeddings model."""
-        from app.embeddings.get_embedding_model import initalize_embedding_model
-        return initalize_embedding_model()
+        """Get embeddings model."""
+        try:
+            return initalize_embedding_model()
+        except Exception as e:
+            logging.error(f"Failed to initialize embedding model: {str(e)}")
+            return None

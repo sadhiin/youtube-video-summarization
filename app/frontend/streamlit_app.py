@@ -69,25 +69,25 @@ def process_youtube_url(url: str, force_refresh: bool = False, num_lines: int = 
         return {"error": f"Error processing video: {str(e)}"}
 
 
-def handle_chat(video_id: str, message: str, session_id: Optional[str] = None):
+def handle_chat(video_id, message, session_id=None):
     """
     Handle chat interaction with a video.
-
     Args:
         video_id: YouTube video ID
         message: User message
         session_id: Session ID for continuing a conversation
-
     Returns:
         Chat response
     """
     client = st.session_state.api_client
-
     try:
+        st.write(f"Debug: Sending chat request for video {video_id}")
         response = client.chat_with_video(video_id, message, session_id)
         return response
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error in chat: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
         return {"answer": f"Sorry, an error occurred: {str(e)}", "sources": []}
 
 
@@ -199,54 +199,58 @@ def home_view():
 
 def video_view():
     """Display the video view with summary and chat interface."""
+    # Debug information
+    st.write(f"Debug: current_video = {st.session_state.current_video}")
+    
     if not st.session_state.current_video:
+        st.error("No video selected")
         st.session_state.current_view = "home"
         st.rerun()
         return
-
+        
     video = st.session_state.current_video
-
     # Add navigation
     col1, col2, col3 = st.columns([1, 6, 1])
     with col1:
         if st.button("← Back"):
             st.session_state.current_view = "home"
             st.rerun()
-
     with col3:
         if st.button("Search"):
             st.session_state.current_view = "search"
             st.rerun()
-
+            
     # Get full summary
     client = st.session_state.api_client
     try:
         summary = client.get_summary(video["id"])
-
         if "error" in summary:
-            display_error(summary["error"])
+            display_error(f"Error loading video: {summary['error']}")
             st.session_state.current_view = "home"
             st.rerun()
             return
-
+            
         # Display video embed
         youtube_embed(video["id"])
-
+        
         # Display summary
         display_summary(summary)
-
+        
         # Display transcript preview if available
         if "transcript_text" in summary and summary["transcript_text"]:
             display_transcript_preview(summary["transcript_text"])
-
-        # Display chat interface
+            
+        # Explicitly check and display chat interface
+        st.success("Chat is enabled for this video")
         chat_interface(video["id"], handle_chat)
-
+        # chat_interface(video["id"], st.session_state.chat_callback)
+        
     except Exception as e:
         display_error(f"Error loading video: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
         st.session_state.current_view = "home"
         st.rerun()
-
 
 def search_view():
     """Display the search view."""
@@ -276,7 +280,24 @@ def main():
         debug_mode = st.checkbox("Debug Mode", value=False)
     # Initialize session state
     init_session_state()
-
+    
+    # Define chat_callback in the proper scope
+    def chat_callback(video_id, message, session_id):
+        client = st.session_state.api_client
+        response = client.chat_with_video(video_id, message, session_id)
+        if debug_mode:
+            st.write("Debug Information:")
+            st.write(f"- Video ID: {video_id}")
+            st.write(f"- Session ID: {session_id}")
+            st.write(f"- Sources retrieved: {len(response.get('sources', []))}")
+            if response.get('sources'):
+                st.write("First source sample:")
+                st.code(response['sources'][0]['content'][:200])
+        return response
+    
+    # Store the callback in session state
+    st.session_state.chat_callback = chat_callback
+    
     # Display the appropriate view
     if st.session_state.current_view == "home":
         home_view()
@@ -288,20 +309,6 @@ def main():
         # Default to home view
         st.session_state.current_view = "home"
         home_view()
-
-    def chat_callback(video_id, message, session_id):
-        response = api.chat_with_video(video_id, message, session_id)
-
-        if debug_mode:
-            st.write("Debug Information:")
-            st.write(f"- Video ID: {video_id}")
-            st.write(f"- Session ID: {session_id}")
-            st.write(f"- Sources retrieved: {len(response.get('sources', []))}")
-            if response.get('sources'):
-                st.write("First source sample:")
-                st.code(response['sources'][0]['content'][:200])
-
-        return response
 
 if __name__ == "__main__":
     main()

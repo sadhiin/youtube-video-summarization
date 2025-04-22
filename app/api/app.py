@@ -2,47 +2,44 @@
 FastAPI application for the YouTube Video Summarizer.
 """
 
+import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import time
-from functools import lru_cache
 
-from app.api.routes import router
 from app.config import config
+from app.api.routes import router
 from app.db.database import init_db
 from app.utils.caching import setup_redis_cache
 from app.utils.vector_store import init_vector_store
 from app.utils.logger import logging
 
-# Create the FastAPI application
+# FastAPI application
 app = FastAPI(
     title=config.APP_NAME,
     version=config.APP_VERSION,
     description="An API for downloading, transcribing, and summarizing YouTube videos",
 )
 
-# Add CORS middleware
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Initialize the database on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize components on application startup."""
-    # Initialize database
+
     init_db()
 
-    # Initialize vector store
     init_vector_store()
     logging.info("Vector store initialized")
 
-    # Rebuild vector stores for videos with missing stores but available transcripts
     try:
         from app.db.database import get_db
         from app.db.crud import get_stored_summary
@@ -77,12 +74,10 @@ async def startup_event():
         import traceback
         logging.error(traceback.format_exc())
 
-    # Set up Redis cache if configured
     if hasattr(config, "REDIS_URL") and config.REDIS_URL:
         setup_redis_cache(config.REDIS_URL)
 
 
-# Add request timing middleware
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     """Middleware to add processing time header to responses."""
@@ -93,7 +88,6 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-# Error handling
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled exceptions."""
@@ -103,11 +97,11 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Include the API router
+# Include API router
 app.include_router(router)
 
 
-# Root endpoint
+# Root
 @app.get("/")
 async def root():
     """Root endpoint returning basic API information."""

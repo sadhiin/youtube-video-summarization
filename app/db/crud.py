@@ -104,8 +104,7 @@ def get_stored_summary(db: Session, video_id: str) -> Optional[Dict[str, Any]]:
     if not video:
         logging.error(f"Video with ID {video_id} not found in the database.")
         return None
-    # TODO: Ensure to have the correct relationships set up in the models
-    # ensure to heave all the properties in the models
+    
     logging.debug(f"Video found: {video}")
     result = {
         "video_id": video.id,
@@ -119,13 +118,11 @@ def get_stored_summary(db: Session, video_id: str) -> Optional[Dict[str, Any]]:
         "transcript_text": None
     }
 
-    # Get transcript if available
     if video.transcript:
         result["transcript_path"] = video.transcript.file_path
         result["transcript_text"] = video.transcript.text
     else:
         logging.warning(f"Transcript not found for video ID {video_id}.")
-    # Get summary if available
     if video.summary:
         result["summary"] = video.summary.text
     if video.chat_history:
@@ -153,16 +150,12 @@ def store_summary(db: Session, summary: VideoSummary) -> None:
         logging.debug(f"Video not found in the database, creating a new entry with ID: {summary.media_info.video_id}")
         video = create_video(db, summary.media_info)
 
-    # Store transcript if available
     if summary.transcript_text:
-        # Check if transcript exists
         if not video.transcript:
-            # Parse segments if available
             segments = None
             if summary.transcript_segments:
                 segments = summary.transcript_segments
 
-            # Create transcript
             create_transcript(
                 db=db,
                 video_id=video.id,
@@ -172,7 +165,6 @@ def store_summary(db: Session, summary: VideoSummary) -> None:
                 language=summary.language,
             )
 
-    # Store summary if available
     if summary.summary and not video.summary:
         create_summary(
             db=db,
@@ -181,5 +173,4 @@ def store_summary(db: Session, summary: VideoSummary) -> None:
             model=summary.model
         )
 
-    # Commit any pending changes
     db.commit()

@@ -9,9 +9,6 @@ from pydantic import BaseModel
 from app.models.schemas import (
     YouTubeDownloadConfig,
     MediaType,
-    TranscriptionConfig,
-    SummaryConfig,
-    VideoSummary
 )
 from app.api.schems import (
     VideoRequest,
@@ -27,10 +24,11 @@ from app.db.crud import get_stored_summary, store_summary, video_exists
 from app.db.database import get_db, DBSession
 from app.utils.vector_store import add_to_vector_db, search_similar_videos
 from app.utils.logger import logging
-from app.utils.vector_store_manager import VectorStoreManager
-# Create API router
-router = APIRouter(prefix="/api/v1", tags=["youtube"])
 
+from app.utils.vector_store_manager import VectorStoreManager
+from app.core.chat_handler import get_chat_response, ChatSession
+
+router = APIRouter(prefix="/api/v1", tags=["youtube"])
 
 
 # API endpoints
@@ -67,15 +65,12 @@ async def summarize_video(
                 cached=True
             )
 
-    # For new videos, start processing in background and return preliminary info
     try:
-        # Get basic video info first
         config = YouTubeDownloadConfig(url=request.url, media_type=MediaType.AUDIO)
         downloader = YouTubeDownloader(config)
-        # logging.info(f"Downloading video with config: {config}")
         media_info = downloader.get_media_info()
 
-        # Start background processing
+        # background processing
         background_tasks.add_task(
             process_video_in_background,
             url=request.url,
@@ -137,8 +132,7 @@ async def chat_with_video(
             detail="Video not found or transcript not available"
         )
 
-    # This will be implemented in the chat handler module
-    from app.core.chat_handler import get_chat_response, ChatSession
+    
     try:
         session = ChatSession(
             video_id=chat_request.video_id,
@@ -164,7 +158,7 @@ async def search_videos(
 ):
     """Search for similar videos based on transcript content."""
     try:
-        # Search videos using vector DB
+        # Search videos on vector DB
         similar_videos = search_similar_videos(
             query=search_request.query,
             limit=search_request.limit
@@ -201,9 +195,9 @@ def extract_video_id(url: str) -> Optional[str]:
 
     # YouTube URL patterns
     patterns = [
-        r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',  # Standard and shortened
-        r'(?:embed\/)([0-9A-Za-z_-]{11})',   # Embedded videos
-        r'(?:watch\?v=)([0-9A-Za-z_-]{11})'  # Standard watch URL
+        r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',
+        r'(?:embed\/)([0-9A-Za-z_-]{11})',
+        r'(?:watch\?v=)([0-9A-Za-z_-]{11})'
     ]
 
     for pattern in patterns:
@@ -232,13 +226,10 @@ async def process_video_in_background(url: str, model: str, num_lines: int = 5, 
         else:
             logging.info(f"Generated transcript of length {len(summary.transcript_text)} for video {summary.media_info.video_id}")
 
-        # Store in database
         store_summary(db, summary)
         logging.info(f"Stored summary in database for video {summary.media_info.video_id}")
 
-        # Add to vector database for searching
         if summary.transcript_text:
-            from app.utils.vector_store import add_to_vector_db
 
             vector_store = add_to_vector_db(
                 video_id=summary.media_info.video_id,
@@ -250,7 +241,6 @@ async def process_video_in_background(url: str, model: str, num_lines: int = 5, 
             else:
                 logging.error(f"Failed to add transcript to vector store for video {summary.media_info.video_id}")
 
-                # Try again with a different approach - sometimes the first attempt fails
                 logging.info(f"Trying again to create vector store for video {summary.media_info.video_id}")
                 vector_store = add_to_vector_db(
                     video_id=summary.media_info.video_id,

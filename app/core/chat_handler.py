@@ -23,8 +23,9 @@ from app.utils.vector_store import get_vector_store_for_video
 from app.utils.vector_store_manager import VectorStoreManager
 from app.embeddings.get_embedding_model import initalize_embedding_model
 from app.utils.logger import logging
-from app.core.prompts import system_template
+from app.core.prompts import CHAT_SYSTEM_TEMPLATE
 from langchain.memory import ConversationBufferMemory
+
 class ChatSession:
     """Chat session with memory."""
 
@@ -228,7 +229,7 @@ def create_chat_chain(video_id: str, session: ChatSession):
     # Create improved system prompt template
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", system_template),
+        ("system", CHAT_SYSTEM_TEMPLATE),
         ("human", "{question}")
     ])
     logging.info(f"*********** Calling the ConversationalRetrievalChain with video_id: {video_id} ***********")

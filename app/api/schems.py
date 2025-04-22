@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+
 class VideoRequest(BaseModel):
     """Model for requesting video summarization."""
     url: str

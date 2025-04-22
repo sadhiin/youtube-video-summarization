@@ -9,7 +9,11 @@ from typing import Dict, Any, Optional
 
 from groq import Groq
 
-from app.models.schemas import YouTubeMedia, TranscriptionConfig, TranscriptedData
+from app.models.schemas import (
+    YouTubeMedia, 
+    TranscriptionConfig, 
+    TranscriptedData
+)
 from app.utils.logger import logging
 from app.config import config
 
@@ -107,20 +111,16 @@ class AudioTranscriber:
 
         if not media.transcript_path:
             raise ValueError("Transcript path not found in media object")
-        logging.debug(f"Loading transcript from: {media.transcript_path}")
-        if not os.path.exists(media.transcript_path) or not os.path.isfile(
-            media.transcript_path
-        ):
-            raise FileNotFoundError(
-                f"Transcript file not found at {media.transcript_path}"
-            )
+        logging.info(f"Loading transcript from: {media.transcript_path}")
+        if not os.path.exists(media.transcript_path) or not os.path.isfile(media.transcript_path):
+            raise FileNotFoundError(f"Transcript file not found at {media.transcript_path}")
+        
         with open(media.transcript_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # Extract segments based on response format
         if isinstance(data, dict):
             # For verbose_json format
-            logging.debug("Extracting segments from verbose_json format")
+            logging.info("Extracting segments from verbose_json format")
             if "text" in data:
                 transcript_data.transcript_text = data["text"]
             if "segments" in data:
