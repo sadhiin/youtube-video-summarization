@@ -171,3 +171,4 @@ def get_config():
 # Create a config instance
 config = get_config()
 config.initialize()
+chat_config = ChatConfig()

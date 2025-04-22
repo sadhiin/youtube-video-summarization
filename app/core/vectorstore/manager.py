@@ -13,7 +13,7 @@ from app.embeddings.get_embedding_model import initalize_embedding_model
 
 from app.config import config
 from app.utils.logger import logging
-# from app.utils.error_handling import handle_exceptions
+from app.utils.error_handling import handle_vector_store_error
 
 _VIDEO_VECTOR_STORES = {}
 
@@ -44,7 +44,6 @@ class VectorStoreManager:
         if self._exists_on_disk():
             return self._load_from_disk()
             
-        # Create new store
         return self._create_new_store(transcript)
     
     def _exists_on_disk(self) -> bool:
@@ -104,9 +103,8 @@ class VectorStoreManager:
             logging.info(f"Successfully created vector store with {len(documents)} chunks for video {self.video_id}")
             return vector_store
         except Exception as e:
-            # return handle_vector_store_error(e, self.video_id, transcript)
-            logging.error(f"Error creating vector store for video {self.video_id}: {str(e)}")
-            return None
+            return handle_vector_store_error(e, self.video_id, transcript)
+
         
     def _create_documents(self, transcript: str) -> List[Document]:
         """Create documents with metadata from transcript."""
