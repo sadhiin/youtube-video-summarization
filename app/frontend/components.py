@@ -240,11 +240,12 @@ def search_interface(search_callback: Callable):
                                 "author": result["author"],
                             }
                             st.session_state.chat_history = []
+                            st.session_state.current_view = "video"
                             st.rerun()
 
 
 def youtube_embed(video_id: str):
-    """
+    """ 
     Embed a YouTube video.
 
     Args:

@@ -14,7 +14,6 @@ def initalize_embedding_model():
     Returns either NVIDIA embeddings if API key is available,
     or falls back to HuggingFaceEmbeddings.
     """
-    # Try to use NVIDIA embeddings if API key is available
     nvidia_api_key = os.getenv("NVIDIA_API_KEY")
 
     if nvidia_api_key:

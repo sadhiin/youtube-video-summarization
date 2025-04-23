@@ -19,12 +19,16 @@ class Config:
     APP_VERSION = "0.1.1"
 
     ## Data directories
+<<<<<<< HEAD
    
+=======
+    
+>>>>>>> issue/chat
     DATA_DIR = Path("data")
     DOWNLOADS_DIR = DATA_DIR / "downloads"
     TRANSCRIPTS_DIR = DATA_DIR / "transcripts"
     SUMMARIES_DIR = DATA_DIR / "summaries"
-
+    REDIS_URL = os.getenv("REDIS_URL", None)
     # API keys
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
@@ -71,7 +75,6 @@ class Config:
         """Get all application paths."""
         
         return {
-            # "base_dir": cls.BASE_DIR,
             "data_dir": cls.DATA_DIR,
             "downloads_dir": cls.DOWNLOADS_DIR,
             "transcripts_dir": cls.TRANSCRIPTS_DIR,

@@ -16,17 +16,15 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from app.config import config
 from app.utils.logger import logging
 
-# Global storage for vector stores
 _VIDEO_VECTOR_STORES = {}
 
-# Directory for storing FAISS indices
 VECTOR_DIR = config.DATA_DIR / "vector_indices"
 
 
 def init_vector_store():
     """Initialize the vector store directory."""
     os.makedirs(VECTOR_DIR, exist_ok=True)
-    # Load existing indices
+
     _load_existing_indices()
 
 
@@ -36,7 +34,6 @@ def _load_existing_indices():
     if not indices_dir.exists():
         return
 
-    # Get embeddings
     embeddings = initalize_embedding_model()
 
     # Load each index
@@ -72,22 +69,19 @@ def add_to_vector_db(video_id: str, text: str):
         logging.error(f"Error: Transcript for video {video_id} is too short ({len(cleaned_text)} chars)")
         return None
 
-    # Create the folder for this video's index
     video_dir = VECTOR_DIR / video_id
     os.makedirs(video_dir, exist_ok=True)
 
-    # Split text into chunks - INCREASED CHUNK SIZE FOR BETTER CONTEXT
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000, 
         chunk_overlap=100,
-        separators=["\n\n", "\n", ". ", " ", ""]
+        separators=["\n\n", "\n", ".", " ", ""]
     )
 
     # Create documents with metadata
     chunks = text_splitter.split_text(cleaned_text)
     logging.info(f"Split transcript into {len(chunks)} chunks for vector storage")
 
-    # Ensure we have chunks to work with
     if not chunks:
         logging.error(f"Error: No chunks were created from transcript for video {video_id}")
         return None
@@ -171,7 +165,7 @@ def search_similar_videos(query: str, limit: int = 5) -> List[str]:
             # Search in this vector store
             similar_docs = vector_store.similarity_search_by_vector(
                 query_embedding,
-                k=3  # Get top 2 chunks from each video
+                k=3  # Get top 3 chunks from each video
             )
 
             if similar_docs:

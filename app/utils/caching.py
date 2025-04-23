@@ -7,14 +7,14 @@ import time
 import functools
 from typing import Any, Dict, Optional, Callable, Union
 from functools import lru_cache
+from app.utils.logger import logging
 
-# Try to import Redis, but allow fallback to in-memory caching
 try:
     import redis
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    print("Redis not available, using in-memory caching instead")
+    logging.info("Redis not available, using in-memory caching instead")
 
 # Global Redis client
 _redis_client = None
@@ -40,11 +40,11 @@ def setup_redis_cache(redis_url: str) -> bool:
 
     try:
         _redis_client = redis.from_url(redis_url)
-        _redis_client.ping()  # Test connection
-        print("Redis cache configured successfully")
+        _redis_client.ping()
+        logging.info("Redis cache configured successfully")
         return True
     except Exception as e:
-        print(f"Error configuring Redis: {e}")
+        logging.error(f"Error configuring Redis: {e}")
         _redis_client = None
         return False
 
@@ -70,7 +70,7 @@ def cache_set(key: str, value: Any, expires: int = 3600) -> bool:
     try:
         serialized = json.dumps(value)
     except (TypeError, ValueError):
-        print(f"Error serializing value for key {key}")
+        logging.error(f"Error serializing value for key {key}")
         return False
 
     # Store in appropriate cache
@@ -78,7 +78,7 @@ def cache_set(key: str, value: Any, expires: int = 3600) -> bool:
         try:
             return _redis_client.setex(key, expires, serialized)
         except Exception as e:
-            print(f"Redis error in cache_set: {e}")
+            logging.error(f"Redis error in cache_set: {e}")
             # Fall back to memory cache
 
     # Memory cache fallback
@@ -139,7 +139,7 @@ def cache_delete(key: str) -> bool:
         try:
             redis_result = bool(_redis_client.delete(key))
         except Exception as e:
-            print(f"Redis error in cache_delete: {e}")
+            logging.error(f"Redis error in cache_delete: {e}")
 
     # Delete from memory cache
     memory_result = False
@@ -220,6 +220,6 @@ def clear_redis_cache(pattern: str = "*"):
                 _redis_client.delete(*keys)
             return True
         except Exception as e:
-            print(f"Redis error in clear_redis_cache: {e}")
+            logging.error(f"Redis error in clear_redis_cache: {e}")
 
     return False
