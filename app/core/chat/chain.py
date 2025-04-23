@@ -17,7 +17,7 @@ from app.utils.logger import logging
 from app.core.chat.session import ChatSession
 from app.core.vectorstore.manager import VectorStoreManager
 from app.embeddings.get_embedding_model import initalize_embedding_model
-from app.core.prompts import system_template
+from app.core.prompts import CHAT_SYSTEM_TEMPLATE
 
 class ChatChainFactory:
     """Factory for creating chat chains with appropriate configuration."""
