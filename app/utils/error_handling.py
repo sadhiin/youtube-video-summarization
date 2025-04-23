@@ -9,7 +9,7 @@ from langchain_community.vectorstores import FAISS
 from langchain.docstore.document import Document
 
 from app.embeddings.get_embedding_model import initalize_embedding_model
-from app.config import config, chat_config
+from app.config import config
 from app.utils.logger import logging
 
 def handle_vector_store_error(error: Exception, video_id: str, transcript: str) -> Optional[FAISS]:
@@ -30,11 +30,10 @@ def handle_vector_store_error(error: Exception, video_id: str, transcript: str) 
     logging.error(f"Error creating vector store for video {video_id}: {error_str}")
     logging.error(error_trace)
     
-    # Try emergency vector store creation
     try:
         logging.info("Attempting to create emergency vector store")
         
-        emergency_text = transcript[:chat_config.EMERGENCY_CHUNK_LIMIT] 
+        emergency_text = transcript[:config.EMERGENCY_CHUNK_LIMIT] 
         
         # Create a single document
         embeddings = initalize_embedding_model()

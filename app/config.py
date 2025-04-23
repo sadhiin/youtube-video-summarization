@@ -8,7 +8,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-# Ensure environment variables are loaded
 load_dotenv()
 
 
@@ -20,8 +19,7 @@ class Config:
     APP_VERSION = "0.1.1"
 
     ## Data directories
-    # BASE_DIR = Path(__file__).resolve().parent.parent.absolute()
-    # DATA_DIR = BASE_DIR / "data"
+   
     DATA_DIR = Path("data")
     DOWNLOADS_DIR = DATA_DIR / "downloads"
     TRANSCRIPTS_DIR = DATA_DIR / "transcripts"
@@ -33,6 +31,7 @@ class Config:
     # Default models
     DEFAULT_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
     DEFAULT_SUMMARY_MODEL = "llama-3.3-70b-versatile"
+    MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "huggingface")
     VECTOR_EMBEDDING_MODEL = os.getenv("VECTOR_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     os.environ["NVIDIA_API_KEY"] = os.getenv("NVIDIA_API_KEY")
 
@@ -41,6 +40,20 @@ class Config:
     # os.environ["LANGSMITH_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "YouTube Summarizer Project")
     PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000")
     # Create data directories if they don't exist
+    
+    ## chat related settings
+    CHUNK_SIZE = 1000
+    CHUNK_OVERLAP = 100
+    
+    # Vector store settings
+    EMERGENCY_CHUNK_LIMIT = 9000
+    SIMILARITY_THRESHOLD = 0.2
+    
+    # Retry configuration
+    VECTOR_STORE_RETRIES = 3
+    VECTOR_STORE_RETRY_DELAY = 1
+    VECTOR_STORE_BACKOFF = 2
+
     @classmethod
     def initialize(cls):
         """Initialize the application configuration."""
@@ -64,82 +77,6 @@ class Config:
             "transcripts_dir": cls.TRANSCRIPTS_DIR,
             "summaries_dir": cls.SUMMARIES_DIR
         }
-
-class ChatConfig(Config):
-    """Configuration for chat-related components."""
-    # Text chunking parameters
-    CHUNK_SIZE = 1000
-    CHUNK_OVERLAP = 100
-    
-    # Vector store settings
-    EMERGENCY_CHUNK_LIMIT = 9000
-    SIMILARITY_THRESHOLD = 0.2
-    
-    # Retry configuration
-    VECTOR_STORE_RETRIES = 3
-    VECTOR_STORE_RETRY_DELAY = 1
-    VECTOR_STORE_BACKOFF = 2
-
-    # Prompt configuration
-    PROMPT_TEMPLATE = """\
-        You are an AI assistant that helps users understand YouTube video content.
-        You have access to the transcript of the video they're asking about.
-
-        Relevant transcript context:
-        {context}
-
-        Conversation history:
-        {chat_history}
-
-        Instructions:
-        1. Answer concisely (under 500 characters)
-        2. Cite timestamps when available
-        3. If unsure, say "The transcript doesn't mention this"
-        4. Never invent information
-
-        Current question: {question}\
-    """
-
-    # Prompt configuration
-    PROMPT_TEMPLATE = """\
-        You are an AI assistant that helps users understand YouTube video content.
-        You have access to the transcript of the video they're asking about.
-
-        Relevant transcript context:
-        {context}
-
-        Conversation history:
-        {chat_history}
-
-        Instructions:
-        1. Answer concisely (under 500 characters)
-        2. Cite timestamps when available
-        3. If unsure, say "The transcript doesn't mention this"
-        4. Never invent information
-
-        Current question: {question}\
-    """
-
-    # Prompt configuration
-    PROMPT_TEMPLATE = """\
-        You are an AI assistant that helps users understand YouTube video content.
-        You have access to the transcript of the video they're asking about.
-
-        Relevant transcript context:
-        {context}
-
-        Conversation history:
-        {chat_history}
-
-        Instructions:
-        1. Answer concisely (under 500 characters)
-        2. Cite timestamps when available
-        3. If unsure, say "The transcript doesn't mention this"
-        4. Never invent information
-
-        Current question: {question}\
-    """
-
 
 class DevelopmentConfig(Config):
     """Development configuration."""
@@ -171,4 +108,3 @@ def get_config():
 # Create a config instance
 config = get_config()
 config.initialize()
-chat_config = ChatConfig()
