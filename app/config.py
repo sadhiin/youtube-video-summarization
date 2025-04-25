@@ -19,11 +19,6 @@ class Config:
     APP_VERSION = "0.1.1"
 
     ## Data directories
-<<<<<<< HEAD
-   
-=======
-    
->>>>>>> issue/chat
     DATA_DIR = Path("data")
     DOWNLOADS_DIR = DATA_DIR / "downloads"
     TRANSCRIPTS_DIR = DATA_DIR / "transcripts"
@@ -43,7 +38,6 @@ class Config:
     # os.environ["LANGSMITH_TRACING"] = os.getenv("LANGSMITH_TRACING", "true")
     # os.environ["LANGSMITH_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "YouTube Summarizer Project")
     PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000")
-    # Create data directories if they don't exist
     
     ## chat related settings
     CHUNK_SIZE = 1000

@@ -9,9 +9,10 @@ from fastapi.responses import JSONResponse
 
 from app.config import config
 from app.api.routes import router
-from app.db.database import init_db
+from app.db.database import init_db,get_db
+from app.db.crud import get_stored_summary
 from app.utils.caching import setup_redis_cache
-from app.utils.vector_store import init_vector_store
+from app.core.vectorstore.manager import VectorStoreManager
 from app.utils.logger import logging
 
 # FastAPI application
@@ -37,14 +38,11 @@ async def startup_event():
 
     init_db()
 
-    init_vector_store()
+    VectorStoreManager.init_vector_stores()
     logging.info("Vector store initialized")
 
     try:
-        from app.db.database import get_db
-        from app.db.crud import get_stored_summary
-        from app.utils.vector_store import add_to_vector_db, get_vector_store_for_video, _VIDEO_VECTOR_STORES
-
+        
         db_session = next(get_db())
         from app.db.models import Video
         videos = db_session.query(Video).all()
