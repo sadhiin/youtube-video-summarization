@@ -14,7 +14,7 @@ class Video(Base):
     """Model representing a YouTube video."""
     __tablename__ = "videos"
 
-    id = Column(String(20), primary_key=True)  # YouTube video ID
+    id = Column(String(20), primary_key=True)
     title = Column(String(255), nullable=False)
     author = Column(String(255), nullable=False)
     url = Column(String(255), nullable=False)

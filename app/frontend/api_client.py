@@ -162,9 +162,9 @@ class ApiClient:
         """
         import re
         patterns = [
-            r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',  # Standard and shortened
-            r'(?:embed\/)([0-9A-Za-z_-]{11})',   # Embedded videos
-            r'(?:watch\?v=)([0-9A-Za-z_-]{11})'  # Standard watch URL
+            r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',
+            r'(?:embed\/)([0-9A-Za-z_-]{11})',  
+            r'(?:watch\?v=)([0-9A-Za-z_-]{11})'
         ]
 
         for pattern in patterns:

@@ -8,7 +8,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-# Ensure environment variables are loaded
 load_dotenv()
 
 
@@ -17,30 +16,46 @@ class Config:
 
     # Application info
     APP_NAME = "YouTube Video Summarizer"
-    APP_VERSION = "0.1.1"
+    APP_VERSION = "0.1.2"
 
     ## Data directories
-    # BASE_DIR = Path(__file__).resolve().parent.parent.absolute()
-    # DATA_DIR = BASE_DIR / "data"
     DATA_DIR = Path("data")
     DOWNLOADS_DIR = DATA_DIR / "downloads"
     TRANSCRIPTS_DIR = DATA_DIR / "transcripts"
     SUMMARIES_DIR = DATA_DIR / "summaries"
-
+    REDIS_URL = os.getenv("REDIS_URL", None)
     # API keys
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+    TEMPERATURE = 0.3
 
     # Default models
     DEFAULT_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
     DEFAULT_SUMMARY_MODEL = "llama-3.3-70b-versatile"
+    MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "huggingface")
     VECTOR_EMBEDDING_MODEL = os.getenv("VECTOR_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     os.environ["NVIDIA_API_KEY"] = os.getenv("NVIDIA_API_KEY")
-
+    RETRIEVAL_K = int(os.getenv("RETRIEVAL_K", 5))
+    RETRIEVAL_FETCH_K = int(os.getenv("RETRIEVAL_FETCH_K", 10))
     # os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
     # os.environ["LANGSMITH_TRACING"] = os.getenv("LANGSMITH_TRACING", "true")
     # os.environ["LANGSMITH_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "YouTube Summarizer Project")
     PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000")
-    # Create data directories if they don't exist
+    
+    ## chat related settings
+    CHUNK_SIZE = 1000
+    CHUNK_OVERLAP = 100
+    
+    # Vector store settings
+    EMERGENCY_CHUNK_LIMIT = 9000
+    SIMILARITY_THRESHOLD = 0.2
+    
+    # Retry configuration
+    VECTOR_STORE_RETRIES = 3
+    VECTOR_STORE_RETRY_DELAY = 1
+    VECTOR_STORE_BACKOFF = 2
+
+    MAX_CONTEXT_LENGTH = 4096
+    
     @classmethod
     def initialize(cls):
         """Initialize the application configuration."""
@@ -58,13 +73,11 @@ class Config:
         """Get all application paths."""
         
         return {
-            # "base_dir": cls.BASE_DIR,
             "data_dir": cls.DATA_DIR,
             "downloads_dir": cls.DOWNLOADS_DIR,
             "transcripts_dir": cls.TRANSCRIPTS_DIR,
             "summaries_dir": cls.SUMMARIES_DIR
         }
-
 
 class DevelopmentConfig(Config):
     """Development configuration."""
@@ -95,4 +108,4 @@ def get_config():
 
 # Create a config instance
 config = get_config()
-config.initialize()     # just to ensure all the directories are created
+config.initialize()

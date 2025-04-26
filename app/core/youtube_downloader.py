@@ -52,7 +52,6 @@ class YouTubeDownloader:
         if self.config.output_filename:
             base_filename = self.config.output_filename
         else:
-            # Use timestamp and video title for filename
             timestamp = int(time.time())
             # Clean up title to make it filesystem safe
             safe_title = "".join([c if c.isalnum() or c in " -_." else "_" for c in self.yt.title])
@@ -99,7 +98,7 @@ class YouTubeDownloader:
             audio_stream = self.yt.streams.filter(only_audio=True).order_by('abr').last()
             full_output_path = self._get_filename("mp3")
 
-            # Split path into directory and filename components
+            
             output_dir = os.path.dirname(full_output_path)
             filename = os.path.basename(full_output_path)
 
@@ -108,10 +107,8 @@ class YouTubeDownloader:
             logging.info(f"Downloading audio: {self.yt.title}")
 
             if self.config.save_file:
-                # Correctly specify output_path and filename separately
                 audio_stream.download(output_path=output_dir, filename=filename)
 
-                # Verify file exists after download
                 if not os.path.exists(full_output_path):
                     logging.error(f"File not found at expected path: {full_output_path}")
                 else:

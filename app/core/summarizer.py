@@ -11,7 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.chat_models import init_chat_model
 
 from app.models.schemas import YouTubeMedia, SummaryConfig, VideoSummary, TranscriptedData
-
+from app.core.prompts import SUMMARIZE_SYSTEM_PROMPT, REDUCE_PROMPOT
 
 class TranscriptSummarizer:
     """Class to handle transcript summarization operations."""
@@ -40,10 +40,8 @@ class TranscriptSummarizer:
         Returns:
             Summarized text
         """
-        # Create a Document object
         document = Document(page_content=transcript_text)
 
-        # For longer transcripts, split into chunks
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=config.chunk_size,
             chunk_overlap=config.chunk_overlap
@@ -57,8 +55,7 @@ class TranscriptSummarizer:
             max_tokens=config.max_tokens
         )
 
-        # Construct dynamic prompt based on num_lines and selective_keywords
-        system_prompt = "You are an expert summarizer. Create a concise summary of the following transcript from a YouTube video"
+        system_prompt = SUMMARIZE_SYSTEM_PROMPT
 
         if config.num_lines:
             system_prompt += f" in exactly {config.num_lines} lines"
@@ -101,7 +98,7 @@ class TranscriptSummarizer:
 
             # Then combine the summaries
             # Construct dynamic prompt for final summarization
-            reduce_system_prompt = "Combine these partial summaries into a coherent overall summary"
+            reduce_system_prompt = REDUCE_PROMPOT
 
             if config.num_lines:
                 reduce_system_prompt += f" in exactly {config.num_lines} lines"

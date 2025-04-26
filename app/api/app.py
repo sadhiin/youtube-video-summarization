@@ -2,52 +2,47 @@
 FastAPI application for the YouTube Video Summarizer.
 """
 
+import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import time
-from functools import lru_cache
 
-from app.api.routes import router
 from app.config import config
-from app.db.database import init_db
+from app.api.routes import router
+from app.db.database import init_db, get_db
+from app.db.crud import get_stored_summary
 from app.utils.caching import setup_redis_cache
-from app.utils.vector_store import init_vector_store
+from app.core.vectorstore.manager import VectorStoreManager, _VIDEO_VECTOR_STORES
 from app.utils.logger import logging
 
-# Create the FastAPI application
+# FastAPI application
 app = FastAPI(
     title=config.APP_NAME,
     version=config.APP_VERSION,
     description="An API for downloading, transcribing, and summarizing YouTube videos",
 )
 
-# Add CORS middleware
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Initialize the database on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize components on application startup."""
-    # Initialize database
+
     init_db()
 
-    # Initialize vector store
-    init_vector_store()
+    VectorStoreManager.init_vector_stores()
     logging.info("Vector store initialized")
 
-    # Rebuild vector stores for videos with missing stores but available transcripts
     try:
-        from app.db.database import get_db
-        from app.db.crud import get_stored_summary
-        from app.utils.vector_store import add_to_vector_db, get_vector_store_for_video, _VIDEO_VECTOR_STORES
-
+        
         db_session = next(get_db())
         from app.db.models import Video
         videos = db_session.query(Video).all()
@@ -55,7 +50,8 @@ async def startup_event():
         logging.info(f"Found {len(videos)} videos in database, checking vector stores...")
 
         for video in videos:
-            if not get_vector_store_for_video(video.id):
+            manager = VectorStoreManager(video.id)
+            if not manager._exists_on_disk():
                 logging.info(f"Rebuilding vector store for video {video.id}")
                 # Get summary and check for transcript
                 summary = get_stored_summary(db_session, video.id)
@@ -63,7 +59,7 @@ async def startup_event():
                     transcript_length = len(summary["transcript_text"])
                     logging.info(f"Found transcript for video {video.id} with length: {transcript_length} of transcript text")
 
-                    vector_store = add_to_vector_db(video.id, summary["transcript_text"])
+                    vector_store = manager.get_or_create_store(summary["transcript_text"])
                     if vector_store:
                         logging.info(f"Successfully created vector store for video {video.id}")
                     else:
@@ -72,17 +68,16 @@ async def startup_event():
                     logging.info(f"No transcript text found for video {video.id}")
 
         logging.info(f"Vector store initialization complete. {len(_VIDEO_VECTOR_STORES)} vector stores available.")
+
     except Exception as e:
         logging.error(f"Error rebuilding vector stores: {e}")
         import traceback
         logging.error(traceback.format_exc())
 
-    # Set up Redis cache if configured
     if hasattr(config, "REDIS_URL") and config.REDIS_URL:
         setup_redis_cache(config.REDIS_URL)
 
 
-# Add request timing middleware
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     """Middleware to add processing time header to responses."""
@@ -93,7 +88,6 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-# Error handling
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled exceptions."""
@@ -103,11 +97,11 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Include the API router
+# Include API router
 app.include_router(router)
 
 
-# Root endpoint
+# Root
 @app.get("/")
 async def root():
     """Root endpoint returning basic API information."""

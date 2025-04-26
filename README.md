@@ -24,11 +24,57 @@ A Python application that downloads YouTube videos, transcribes them using Groq'
 
 ---
 
+## Architecture
+
+```mermaid
+graph TD
+   A[YouTube URL] --> B[YouTube Downloader]
+   B --> |Audio File| C[Audio Transcriber]
+   C --> |Transcript| D[Transcript Summarizer]
+   D --> |Summary| E[Database Storage]
+   
+   E --> F[FastAPI Backend]
+   E --> G[Command Line Interface]
+   
+   F --> H[Streamlit Frontend]
+   H --> |User Input| F
+   
+   E --> I[Vector Embeddings]
+   I --> J[FAISS Vector DB]
+   J --> |Semantic Search| F
+   
+   K[User] --> G
+   K --> H
+   
+   L[Chat Module] --> F
+   F --> L
+   L --> M[LLM Model/Groq API]
+   E --> L
+   J --> L
+   
+   subgraph "Core Components"
+      B
+      C
+      D
+   end
+   
+   subgraph "Storage"
+      E
+      I
+      J
+   end
+   
+   subgraph "User Interfaces"
+      G
+      H
+   end
+
+```
 ## Installation
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - Groq API key
 - Redis (optional, for caching)
 
@@ -44,10 +90,30 @@ A Python application that downloads YouTube videos, transcribes them using Groq'
    ```bash
    pip install -r requirements.txt
    ```
+   or use `uv`
+   ```bash
+   uv sync
+   ```
+   Activate the virtual environment
+   ```bash
+   source .venv/bin/activate  # on linux or mac
+   
+   .venv\Script\activate      # on windows
+   ```
 
 3. Create a `.env` file in the root directory with your API keys:
    ```
-   GROQ_API_KEY=your_groq_api_key_here
+   GROQ_API_KEY='your_groq_api_key_here'
+   MODEL_PROVIDER='groq'
+   NVIDIA_API_KEY='nvida-api-key_here'
+   VECTOR_EMBEDDING_MODEL="vector-embedding-model_here from nvidia"
+   PUBLIC_URL='http://localhost:8000'
+   DATABASE_URL='your_database_url_here use postgres or sqlite'
+   LANGSMITH_API_KEY='your-langsmith_api_key_here'
+   LANGSMITH_TRACING='true'
+   LANGSMITH_PROJECT='YouTube Summarizer Project'
+   REDIS_URL='redis://localhost:6379/0'
+   # ENVIRONMENT='production'
    ```
 
 ## Usage
@@ -144,7 +210,8 @@ youtube-summarizer/
 │   ├── api/                       # API functionality
 │   │   ├── __init__.py
 │   │   ├── app.py                 # FastAPI application
-│   │   └── routes.py              # API endpoints
+│   │   ├── routes.py              # API endpoints
+│   │   └── schemas.py             # API data models
 │   │
 │   ├── frontend/                  # Streamlit frontend
 │   │   ├── __init__.py
@@ -157,7 +224,9 @@ youtube-summarizer/
 │   │   ├── youtube_downloader.py  # YouTube download functionality
 │   │   ├── transcriber.py         # Speech-to-text functionality
 │   │   ├── summarizer.py          # LLM summarization
-│   │   └── chat_handler.py        # Chat functionality with LLM memory
+│   │   ├── prompts.py             # LLM prompt templates
+│   │   ├── chat/                  # Chat functionality
+│   │   └── vectorstore/           # Vector store implementations
 │   │
 │   ├── db/                        # Database functionality
 │   │   ├── __init__.py
@@ -165,21 +234,17 @@ youtube-summarizer/
 │   │   ├── models.py              # SQLAlchemy models
 │   │   └── crud.py                # CRUD operations
 │   │
+│   ├── embeddings/                # Embedding models
+│   │   ├── __init__.py
+│   │   └── get_embedding_model.py # Embedding model initialization
+│   │
 │   ├── models/                    # Data models
 │   │   ├── __init__.py
 │   │   └── schemas.py             # Pydantic models
 │   │
 │   └── utils/                     # Utility functions
 │       ├── __init__.py
-│       ├── helpers.py             # Helper functions
-│       ├── vector_store.py        # FAISS vector store implementation
-│       └── caching.py             # Redis/in-memory caching utilities
-│
-├── data/                          # Data storage
-│   ├── downloads/                 # Downloaded audio files
-│   ├── transcripts/               # Generated transcripts
-│   ├── summaries/                 # Generated summaries
-│   └── vector_indices/            # FAISS vector indices
+│       └── logger.py              # Logging configuration
 │
 ├── run_api.py                     # API server entry point
 ├── run_streamlit.py               # Streamlit app entry point
@@ -195,6 +260,8 @@ By default, SQLite is used. To use PostgreSQL, set in your `.env` file:
 
 ```
 DATABASE_URL=postgresql://user:password@localhost/youtube_summarizer
+# or
+DATABASE_URL="sqlite:///data/youtube_summarizer.db"
 ```
 
 ## Caching Configuration
