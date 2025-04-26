@@ -17,6 +17,9 @@ RUN pip install --upgrade pip && \
 
 COPY . .
 
+#ECHO "export PYTHONPATH=/app" >> ~/.bashrc
+#RUN echo "export PYTHONPATH=/app" >> ~/.bashrc
+
 #Expose the ports
 EXPOSE 8000 8501
 

@@ -1,0 +1,70 @@
+name: youtube-video-summarizer
+
+services:
+  backend:
+    build:
+      context: ./  # Specify the build context here
+      dockerfile: Dockerfile  # Optional: specify the Dockerfile. In case the docker file present in other dicrectory or it's named differently
+    container_name: youtube_summarizer_backend
+    env_file:
+      - .env
+    command: ["uvicorn", "app.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    
+    # Storage volumes
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+    ports:
+      - "8000:8000"
+    
+    environment:
+      - DATABASE_URL=sqlite:////app/data/youtube_summarizer.db
+      - LOG_FILE=/app/logs/youtubesummarizerlogger.log
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+    networks:
+      - summarizer-net
+
+  frontend:
+    build:
+      context: ./  # Specify the build context here path to the frontend directory and it's dockerfile (for our case it's same as backend)
+      dockerfile: Dockerfile
+    container_name: youtube_summarizer_frontend
+    env_file:
+      - .env
+    #command: ["streamlit", "run", "app.frontend.streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false"]
+    command: ["python", "run_streamlit.py", "--api-url=http://backend:8000"]
+    ports:
+      - "8501:8501"
+    
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+    environment:
+      - PUBLIC_URL=http://backend:8000
+      - LOG_FILE=/app/logs/youtubesummarizerlogger.log
+    
+    depends_on:
+      - backend
+      - redis
+      
+    networks:
+      - summarizer-net
+    
+  redis:
+    image: "redis:alpine"
+    container_name: youtube_summarizer_redis
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - summarizer-net
+
+networks:
+  summarizer-net:
+    driver: bridge

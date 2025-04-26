@@ -8,7 +8,7 @@ import datetime
 import time
 import re
 import uuid
-
+from app.config import config
 
 def header():
     """Display the application header."""
@@ -41,7 +41,7 @@ def sidebar():
         """)
 
         st.markdown("## Settings")
-        api_url = st.text_input("API URL", value="http://localhost:8000", key="api_url")
+        api_url = st.text_input("API URL", value=config.PUBLIC_URL, key="api_url")
 
         # Store settings in session state
         if "api_url" not in st.session_state:
@@ -74,14 +74,14 @@ def youtube_input():
         with col1:
             # Number of lines for summary
             st.subheader("Desired number of lines for summary")
-            num_lines = st.number_input("", min_value=1, max_value=20, value=5, step=1)
+            num_lines = st.number_input("", min_value=1, max_value=50, value=5, step=1)
 
         with col2:
             # Selective keywords
             st.subheader("Selective words (optional, comma-separated)")
             selective_keywords = st.text_input(
                 "",
-                placeholder="e.g., technology, AI, innovation"
+                placeholder="e.g., system desing, AI, innovation"
             )
 
         col1, col2 = st.columns([1, 5])

@@ -1,32 +1,35 @@
 [project]
-name = "youtube-video-summarization"
-version = "0.1.0"
+name = "youtube-video-summarizer"
+version = "0.1.2"
 description = "Summarize and Chat with Youtube video"
+author = [
+    {name = "Shanjidul Islam Sadhin",email = "sadhin.aiub.cse@gmail.com"}
+]
 readme = "README.md"
 requires-python = ">=3.12.9"
 dependencies = [
-    "faiss-cpu>=1.10.0",
-    "google-genai>=1.10.0",
-    "groq>=0.22.0",
-    "langchain[groq]>=0.3.23",
-    "langchain-community>=0.3.21",
-    "langchain-text-splitters>=0.3.8",
-    "python-dotenv>=1.1.0",
-    "pytube>=15.0.0",
-    "pytubefix>=8.12.3",
-    "pytest>=8.3.5",
-    "black>=25.1.0",
-    "tqdm>=4.67.1",
-    "isort>=6.0.1",
-    "flake8>=7.2.0",
-    "langchain-core>=0.3.51",
-    "langchain-groq>=0.3.2",
-    "pydantic>=2.11.3",
-    "streamlit>=1.44.1",
-    "fastapi[all]>=0.115.12",
-    "uvicorn>=0.34.0",
-    "redis>=5.2.1",
-    "langchain-nvidia-ai-endpoints>=0.3.9",
-    "retry>=0.9.2",
-    "langgraph>=0.3.31",
+    "faiss-cpu==1.10.0",
+    "google-genai==1.10.0",
+    "groq==0.22.0",
+    "langchain[groq]==0.3.23",
+    "langchain-community==0.3.21",
+    "langchain-text-splitters==0.3.8",
+    "python-dotenv==1.1.0",
+    "pytube==15.0.0",
+    "pytubefix==8.12.3",
+    "pytest==8.3.5",
+    "black==25.1.0",
+    "tqdm==4.67.1",
+    "isort==6.0.1",
+    "flake8==7.2.0",
+    "langchain-core==0.3.51",
+    "langchain-groq==0.3.2",
+    "pydantic==2.11.3",
+    "streamlit==1.44.1",
+    "fastapi[all]==0.115.12",
+    "uvicorn==0.34.0",
+    "redis==5.2.1",
+    "langchain-nvidia-ai-endpoints==0.3.9",
+    "retry==0.9.2",
+    "langgraph==0.3.31",
 ]
