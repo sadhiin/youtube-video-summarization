@@ -9,10 +9,10 @@ from fastapi.responses import JSONResponse
 
 from app.config import config
 from app.api.routes import router
-from app.db.database import init_db,get_db
+from app.db.database import init_db, get_db
 from app.db.crud import get_stored_summary
 from app.utils.caching import setup_redis_cache
-from app.core.vectorstore.manager import VectorStoreManager
+from app.core.vectorstore.manager import VectorStoreManager, _VIDEO_VECTOR_STORES
 from app.utils.logger import logging
 
 # FastAPI application
@@ -50,7 +50,8 @@ async def startup_event():
         logging.info(f"Found {len(videos)} videos in database, checking vector stores...")
 
         for video in videos:
-            if not get_vector_store_for_video(video.id):
+            manager = VectorStoreManager(video.id)
+            if not manager._exists_on_disk():
                 logging.info(f"Rebuilding vector store for video {video.id}")
                 # Get summary and check for transcript
                 summary = get_stored_summary(db_session, video.id)
@@ -58,7 +59,7 @@ async def startup_event():
                     transcript_length = len(summary["transcript_text"])
                     logging.info(f"Found transcript for video {video.id} with length: {transcript_length} of transcript text")
 
-                    vector_store = add_to_vector_db(video.id, summary["transcript_text"])
+                    vector_store = manager.get_or_create_store(summary["transcript_text"])
                     if vector_store:
                         logging.info(f"Successfully created vector store for video {video.id}")
                     else:
@@ -67,6 +68,7 @@ async def startup_event():
                     logging.info(f"No transcript text found for video {video.id}")
 
         logging.info(f"Vector store initialization complete. {len(_VIDEO_VECTOR_STORES)} vector stores available.")
+
     except Exception as e:
         logging.error(f"Error rebuilding vector stores: {e}")
         import traceback

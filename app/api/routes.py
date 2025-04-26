@@ -140,7 +140,7 @@ async def chat_with_video(chat_request: ChatRequest, db: DBSession = Depends(get
             video_id=chat_request.video_id,
             message=chat_request.message,
             db=db,
-            session_id=chat_request.session_id,
+            # session_id=chat_request.session_id,
         )
 
         return response

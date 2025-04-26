@@ -36,6 +36,7 @@ class ChatChainFactory:
             ConversationalRetrievalChain: Configured chain for conversation
         """
         # Initialize LLM
+        logging.info(f"Initializing LLM for video {video_id} with model {config.DEFAULT_SUMMARY_MODEL} from {config.MODEL_PROVIDER}")
         llm = init_chat_model(
             model=config.DEFAULT_SUMMARY_MODEL,
             model_provider=config.MODEL_PROVIDER,

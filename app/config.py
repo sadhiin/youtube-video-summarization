@@ -16,7 +16,7 @@ class Config:
 
     # Application info
     APP_NAME = "YouTube Video Summarizer"
-    APP_VERSION = "0.1.1"
+    APP_VERSION = "0.1.2"
 
     ## Data directories
     DATA_DIR = Path("data")
@@ -26,6 +26,7 @@ class Config:
     REDIS_URL = os.getenv("REDIS_URL", None)
     # API keys
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+    TEMPERATURE = 0.3
 
     # Default models
     DEFAULT_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
@@ -33,7 +34,8 @@ class Config:
     MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "huggingface")
     VECTOR_EMBEDDING_MODEL = os.getenv("VECTOR_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     os.environ["NVIDIA_API_KEY"] = os.getenv("NVIDIA_API_KEY")
-
+    RETRIEVAL_K = int(os.getenv("RETRIEVAL_K", 5))
+    RETRIEVAL_FETCH_K = int(os.getenv("RETRIEVAL_FETCH_K", 10))
     # os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
     # os.environ["LANGSMITH_TRACING"] = os.getenv("LANGSMITH_TRACING", "true")
     # os.environ["LANGSMITH_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "YouTube Summarizer Project")
@@ -52,6 +54,8 @@ class Config:
     VECTOR_STORE_RETRY_DELAY = 1
     VECTOR_STORE_BACKOFF = 2
 
+    MAX_CONTEXT_LENGTH = 4096
+    
     @classmethod
     def initialize(cls):
         """Initialize the application configuration."""
