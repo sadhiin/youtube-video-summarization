@@ -74,7 +74,7 @@ graph TD
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - Groq API key
 - Redis (optional, for caching)
 
@@ -89,6 +89,16 @@ graph TD
 2. Install the required packages:
    ```bash
    pip install -r requirements.txt
+   ```
+   or use `uv`
+   ```bash
+   uv sync
+   ```
+   Activate the virtual environment
+   ```bash
+   source .venv/bin/activate  # on linux or mac
+   
+   .venv\Script\activate      # on windows
    ```
 
 3. Create a `.env` file in the root directory with your API keys:
