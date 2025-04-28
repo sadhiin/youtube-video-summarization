@@ -10,6 +10,8 @@ from unittest.mock import patch, MagicMock, mock_open
 from app.models.schemas import YouTubeMedia, TranscriptionConfig, TranscriptedData
 from app.core.transcriber import AudioTranscriber
 
+from dotenv import load_dotenv
+load_dotenv()
 
 @pytest.fixture
 def mock_groq_client():

@@ -13,7 +13,8 @@ from app.models.schemas import (
     TranscriptedData
 )
 from app.core.summarizer import TranscriptSummarizer
-
+from dotenv import load_dotenv
+load_dotenv()
 
 @pytest.fixture
 def mock_langchain_model():

@@ -3,9 +3,15 @@ Configuration for pytest tests.
 """
 
 import os
+import sys
 import pytest
 from pathlib import Path
 
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from dotenv import load_dotenv
+load_dotenv()
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():

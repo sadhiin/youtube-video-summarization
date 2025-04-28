@@ -2,7 +2,7 @@
 name = "youtube-video-summarizer"
 version = "0.1.2"
 description = "Summarize and Chat with Youtube video"
-author = [
+authors = [
     {name = "Shanjidul Islam Sadhin",email = "sadhin.aiub.cse@gmail.com"}
 ]
 readme = "README.md"

@@ -8,7 +8,8 @@ from unittest.mock import patch, MagicMock
 
 from app.models.schemas import MediaType, YouTubeDownloadConfig, YouTubeMedia
 from app.core.youtube_downloader import YouTubeDownloader
-
+from dotenv import load_dotenv
+load_dotenv()
 
 @pytest.fixture
 def mock_youtube():

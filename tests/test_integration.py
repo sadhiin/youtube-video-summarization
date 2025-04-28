@@ -9,7 +9,8 @@ from unittest.mock import patch, MagicMock
 
 from app.main import summarize_youtube_video
 from app.models.schemas import MediaType, VideoSummary
-
+from dotenv import load_dotenv
+load_dotenv()
 
 @pytest.fixture
 def mock_youtube_downloader():
